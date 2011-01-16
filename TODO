@@ -4,5 +4,5 @@ New make_skey algoritms
 read and write mbr and boot partition
 
 long:
-Double buffering
+Double buffering for make_skey, write_by_skey, _get_data
 refactor gamma cipher. Divide make_key and cipher
