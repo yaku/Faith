@@ -2,6 +2,7 @@ fast:
 GUI
 New make_skey algoritms
 read and write mbr and boot partition
+add feature
 
 long:
 Double buffering for make_skey, write_by_skey, _get_data
