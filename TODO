@@ -1,0 +1,8 @@
+fast:
+GUI
+New make_skey algoritms
+read and write mbr and boot partition
+
+long:
+Double buffering
+refactor gamma cipher. Divide make_key and cipher
