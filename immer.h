@@ -200,7 +200,7 @@ void make_skey_main(int device, unsigned long long int devicesize, int skeyfile,
 
 void write_by_skey(int device, int datafile, int skeyfile, unsigned int blocks, unsigned int skip) {
 
-    unsigned long long int skey;
+    unsigned long long int skey=0;
     unsigned char *buffer = calloc(1, SKEYRECORDSIZE);
     
     unsigned char *block = calloc(BLOCKSIZE,1);
@@ -225,7 +225,7 @@ void write_by_skey(int device, int datafile, int skeyfile, unsigned int blocks, 
 
 void get_data(int device, int datafile, unsigned long long int skeyaddress, unsigned int skeysize, unsigned int skip) {
 
-    unsigned long long int skey;
+    unsigned long long int skey=0;
     unsigned char *buffer = calloc(1, SKEYRECORDSIZE);
     
     unsigned char *block = calloc(BLOCKSIZE,1);
