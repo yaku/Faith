@@ -7,10 +7,6 @@
  *
  */
 
-void pdie(const char *mesg) {
-   perror(mesg);
-   exit(1);
-}
 
 int is_free(int device, unsigned long long int adress, unsigned int length, unsigned int skip) {
 
@@ -339,7 +335,6 @@ unsigned long long int set_skip(int fd) { /**/
 void make_mbr() {}
 void write_boot_partition() {}
 
-
 void immer_main(int mode, char *devicename, char *datafilename, char *keyfilename, char *charpassword, char *dataskeyfilename, char *keyskeyfilename) {
 
     int device;
@@ -414,28 +409,10 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
     
     devicesize-=skip;
     
-    int randomizer=0;
-    char *configstring=malloc(512);
-    
-    FILE *config = fopen("config.cfg","r");
-    
-    if (config==NULL)
-        pdie("Open configuration file failed");
-    
-    fgets(configstring,512,config);
-    if (strcmp(configstring,"randomizer=URANDOM\n")==0)
-        randomizer=URANDOM;
-    else if (strcmp(configstring,"randomizer=SRAND\n")==0)
-        randomizer=SRAND;
-    
-    if (randomizer==0) {
-    
-        printf("Geting randomizer from configuration file failed.\nSetting standart URANDOM\n");
-        randomizer=URANDOM;
-    
-    }
-        
-    
+    printf("Reading configuration file...");
+    config conf;
+    read_config(&conf,"config.cfg");
+    printf(".done\n");
     
     if (mode==ENCRYPT) {
     
@@ -465,7 +442,7 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         printf(".done\n");    
         
         printf("Filling device with random data...");
-        fill_random(device,devicesize/BLOCKSIZE,skip, randomizer);
+        fill_random(device,devicesize/BLOCKSIZE,skip, conf.randomizer);
         printf(".done\n");
         
         lseek(dataskeyfile, 0, SEEK_SET);
