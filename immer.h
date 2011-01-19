@@ -47,25 +47,42 @@ int is_free(int device, unsigned long long int adress, unsigned int length, unsi
 
 }
 
-void fill_random(int device, unsigned int blocks, unsigned int skip) { 
+void fill_random(int device, unsigned int blocks, unsigned int skip, int type) { 
 
     lseek(device, skip, SEEK_SET);
     
-    int urandom= open("/dev/urandom",O_RDONLY);
+    if (type==URANDOM) {
     
-    if (urandom<0)
-        pdie("Opening pseudorandom numbers generator failed");
+        int urandom= open("/dev/urandom",O_RDONLY);
     
-    unsigned char *buffer = (unsigned char *) malloc(BLOCKSIZE);
+        if (urandom<0)
+            pdie("Opening pseudorandom numbers generator failed");
     
-    while (blocks--) {
+        unsigned char *buffer = (unsigned char *) malloc(BLOCKSIZE);
     
-        if (read(urandom, buffer, BLOCKSIZE)<0)
-            pdie("Read failed");
+        while (blocks--) {
+        
+            if (read(urandom, buffer, BLOCKSIZE)<0)
+                pdie("Read failed");
             
-        if (write(device, buffer, BLOCKSIZE)<0)
-            pdie("Write failed");
+            if (write(device, buffer, BLOCKSIZE)<0)
+                pdie("Write failed");
     
+        }
+    }
+    
+    if (type==SRAND) {
+        int i=0;
+        unsigned char *randomblock=malloc(BLOCKSIZE);
+        
+        while (blocks--) {
+            for(i=0;i<BLOCKSIZE;i++)
+                *(randomblock+i)=rand()%256;
+                
+            if (write(device, randomblock, BLOCKSIZE));
+        }
+        
+        free(randomblock);
     }
 
 }
@@ -419,7 +436,7 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         printf(".done\n");    
         
         printf("Filling device with random data...");
-        fill_random(device,devicesize/BLOCKSIZE,skip);
+        fill_random(device,devicesize/BLOCKSIZE,skip, SRAND);
         printf(".done\n");
         
         lseek(dataskeyfile, 0, SEEK_SET);

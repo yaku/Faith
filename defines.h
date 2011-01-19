@@ -32,3 +32,6 @@
 #define MAXLEVEL 2000
 
 //#define DEV 1
+
+#define URANDOM 1
+#define SRAND 2
