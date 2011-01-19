@@ -21,6 +21,8 @@
 #include "defines.h"
 #include "includes.h"
 
+#include "die.h"
+#include "config.h"
 #include "password.h"
 #include "immer.h"
 #include "gammacipher.h"

@@ -33,5 +33,7 @@
 
 //#define DEV 1
 
+#define CONFIGSTRINGMAXLEN 1024
+
 #define URANDOM 1
 #define SRAND 2
