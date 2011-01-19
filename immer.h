@@ -79,7 +79,8 @@ void fill_random(int device, unsigned int blocks, unsigned int skip, int type) {
             for(i=0;i<BLOCKSIZE;i++)
                 *(randomblock+i)=rand()%256;
                 
-            if (write(device, randomblock, BLOCKSIZE));
+            if (write(device, randomblock, BLOCKSIZE)<0)
+                pdie("Write failed");
         }
         
         free(randomblock);
