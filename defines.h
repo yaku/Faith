@@ -35,5 +35,5 @@
 
 #define CONFIGSTRINGMAXLEN 1024
 
-#define URANDOM 1
-#define SRAND 2
+#define DEVURANDOM 1
+#define SLRAND 2

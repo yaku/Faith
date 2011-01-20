@@ -47,7 +47,7 @@ void fill_random(int device, unsigned int blocks, unsigned int skip, int type) {
 
     lseek(device, skip, SEEK_SET);
     
-    if (type==URANDOM) {
+    if (type==DEVURANDOM) {
     
         printf("\nFilling device by random data with system urandom randomizer\n");
     
@@ -69,7 +69,7 @@ void fill_random(int device, unsigned int blocks, unsigned int skip, int type) {
         }
     }
     
-    if (type==SRAND) {
+    if (type==SLRAND) {
     
         printf("\nFilling device by random data with standart library randomizer\n");
     

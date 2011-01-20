@@ -29,17 +29,17 @@ void read_config(config *confstruct, char *configfilename) {
         
         fgets(configstring,CONFIGSTRINGMAXLEN,configfile);
     
-        if (strcmp(configstring,"randomizer=URANDOM\n")==0)
-            confstruct->randomizer=URANDOM;
-        else if (strcmp(configstring,"randomizer=SRAND\n")==0)
-            confstruct->randomizer=SRAND;
+        if (strcmp(configstring,"randomizer=DEVURANDOM\n")==0)
+            confstruct->randomizer=DEVURANDOM;
+        else if (strcmp(configstring,"randomizer=SLRAND\n")==0)
+            confstruct->randomizer=SLRAND;
     
     }
     
     if (confstruct->randomizer==0) {
     
         printf("Geting randomizer from configuration file failed.\nSetting default URANDOM\n");
-        confstruct->randomizer=URANDOM;
+        confstruct->randomizer=DEVURANDOM;
     
     }
 
