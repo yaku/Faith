@@ -1,4 +1,5 @@
 fast:
+filetables
 GUI
 New make_skey algoritms
 read and write mbr and boot partition
