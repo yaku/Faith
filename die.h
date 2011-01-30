@@ -7,7 +7,8 @@
  *
  */
 
-void pdie(const char *mesg) {
-   perror(mesg);
-   exit(1);
+void pdie(const char *mesg) 
+{
+        perror(mesg);
+        exit(1);
 }

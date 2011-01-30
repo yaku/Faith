@@ -10,37 +10,39 @@
  
 typedef struct config {
 
-    char randomizer;
+        char randomizer;
 
 } config;
 
-void read_config(config *confstruct, char *configfilename) {
+void read_config(config *confstruct, char *configfilename) 
+{
 
-    char *configstring=malloc(CONFIGSTRINGMAXLEN);
+        char *configstring = malloc(CONFIGSTRINGMAXLEN);
     
-    FILE *configfile = fopen(configfilename,"r");
+        FILE *configfile = fopen(configfilename, "r");
     
-    if (configfile==NULL)
-        pdie("Open configuration file failed");
+        if (configfile == NULL)
+                pdie("Open configuration file failed");
     
-    confstruct->randomizer=0;
+        confstruct->randomizer = 0;
     
-    while (feof(configfile)==0) {
+        while (feof(configfile) == 0) {
         
-        fgets(configstring,CONFIGSTRINGMAXLEN,configfile);
+                fgets(configstring, CONFIGSTRINGMAXLEN, configfile);
     
-        if (strcmp(configstring,"randomizer=DEVURANDOM\n")==0)
-            confstruct->randomizer=DEVURANDOM;
-        else if (strcmp(configstring,"randomizer=SLRAND\n")==0)
-            confstruct->randomizer=SLRAND;
+                if (strcmp(configstring, "randomizer=DEVURANDOM\n") == 0)
+                        confstruct->randomizer = DEVURANDOM;
+                        
+                else if (strcmp(configstring, "randomizer=SLRAND\n") == 0)
+                        confstruct->randomizer  = SLRAND;
     
-    }
+        }
     
-    if (confstruct->randomizer==0) {
+        if (confstruct->randomizer == 0) {
     
-        printf("Geting randomizer from configuration file failed.\nSetting default URANDOM\n");
-        confstruct->randomizer=DEVURANDOM;
+                printf("Geting randomizer from configuration file failed.\nSetting default URANDOM\n");
+                confstruct->randomizer = DEVURANDOM;
     
-    }
+        }
 
 }
