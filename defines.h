@@ -32,3 +32,11 @@
 #define MAXLEVEL 2000
 
 #define DEV 1
+
+#define CONFIGSTRINGMAXLEN 1024
+
+#define DEVURANDOM 1
+#define SLRAND 2
+
+#define FORWARD 1
+#define BACKWARD 2
