@@ -157,6 +157,55 @@ void archive2skey(unsigned long long int *skey, unsigned char *buffer, unsigned 
 
 }
 
+unsigned long long int get_next_block_address(int device, unsigned long long address, unsigned int skip, unsigned int blocksize, int direction) {
+
+    int offset=0;
+    int i=0;
+    
+    unsigned char *block = malloc(blocksize);
+    
+    if (direction==FORWARD) {
+    
+        read_data(device, block, blocksize,address,skip);
+        
+        for (i=0;i<blocksize;i++) {
+        
+            if (*(block+i)==0)
+                offset++;
+            else
+                break;
+        
+        }    
+        
+    }
+    
+    if (direction==BACKWARD) {
+    
+        read_data(device, block,blocksize,address-blocksize,skip);
+        
+        offset=0;
+        
+        for (i=blocksize-1;i>0;i--) {
+        
+            if (*(block+i)==0)
+                offset++;
+            else
+                break;
+        
+        }   
+        
+        offset=-offset; 
+        
+    }
+    
+    free(block);
+    
+    return address+offset;
+    
+
+}
+
+
 void make_skey(int device, unsigned long long int devicesize, unsigned long long int *skey, unsigned int keysize, int blocksize, unsigned int skip) {
 
     unsigned long long int rnd=0;
@@ -165,32 +214,76 @@ void make_skey(int device, unsigned long long int devicesize, unsigned long long
     
     while (completed<keysize) {
         
-        rnd=rand()%devicesize;
-        if (rnd<devicesize-blocksize) 
-            if (is_free(device, rnd, blocksize, skip)) {
+        rnd=rand()% (devicesize-blocksize);
+        
+        if (is_free(device, rnd, blocksize, skip)) {
             
-                *skey++=rnd;
-                completed++;
-                set_flags(device,rnd,blocksize,skip);
-                level=0;
+            *skey++=rnd;
+            completed++;
+            set_flags(device,rnd,blocksize,skip);
+            level=0;
             
-            } else if (is_free(device, rnd-blocksize, blocksize,skip)) {
+        } else if (is_free(device, rnd-blocksize, blocksize,skip)) {
             
-                *skey++=rnd-blocksize;
-                completed++;
-                set_flags(device,rnd-blocksize,blocksize,skip);
-                level=0;
+            *skey++=rnd-blocksize;
+            completed++;
+            set_flags(device,rnd-blocksize,blocksize,skip);
+            level=0;
             
-            } else {
+        } else if (get_next_block_address(device, rnd, skip, blocksize, FORWARD) - \
+                   get_next_block_address(device, rnd, skip, blocksize, BACKWARD) > blocksize) {
+                   
+            int subrnd=0;
+                
+            int flag=0;
+                
+            unsigned long long int next = get_next_block_address(device, rnd, skip, blocksize, FORWARD);
+            unsigned long long int previous =get_next_block_address(device, rnd, skip, blocksize, BACKWARD);
+                
+            int max = next - previous;
+                
+            printf("DBG\n");
+               
+            while (!flag) {
+                
+                subrnd=rand()% max;
+                    
+                if (is_free(device, previous + subrnd, blocksize, skip)) {
             
-                level+=1;
+                    *skey++ = previous + subrnd;
+                    completed++;
+                    set_flags(device,previous + subrnd,blocksize,skip);
+                    
+                    level=0;
+                    flag=1;
             
-            }  
+                } else if (is_free(device, previous + subrnd -blocksize, blocksize,skip)) {
+            
+                    *skey++=previous + subrnd -blocksize;
+                    completed++;
+                    set_flags(device,previous + subrnd-blocksize,blocksize,skip);
+                    
+                    level=0; 
+                    flag=1;
+            
+                } else {
+                    
+                    max=subrnd;
+                    
+                }      
+                
+            }
+     
+        }  else {
+            
+            level+=1;
+            
+        }
 
         if (level==MAXLEVEL) {
         
             printf("Input is too big for this device\nExiting.\n");
-            exit(0);
+            exit(1);
         
         }
     

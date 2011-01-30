@@ -37,3 +37,6 @@
 
 #define DEVURANDOM 1
 #define SLRAND 2
+
+#define FORWARD 1
+#define BACKWARD 2
