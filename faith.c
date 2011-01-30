@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
         
         printf("Running cpio. Making archive...");
         snprintf(command, 1024, "cpio -o -O %s < %s", datafilename, argv[4]);
-        system(command);
+        if (system(command)!=0)
+            pdie("Cpio error");
         printf(".done\n");
         
         printf("Main gamma cipher encryption started...");
@@ -121,7 +122,8 @@ int main(int argc, char **argv) {
         
         printf("Running cpio. Extractiong archive...");
         snprintf(command, 1024, "cpio -i -I %s", datafilename);
-        system(command);
+        if (system(command)!=0)
+            pdie("Cpio error");
         printf(".done\n");
         
         printf("Cleaning work directory. Removing files...");
