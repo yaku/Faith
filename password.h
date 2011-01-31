@@ -104,18 +104,49 @@ void pass2arr(unsigned char *pass, unsigned char *arr)
         long2arr(stage3, arr + 12, 2);
 }
 
+void replace_raw2mixed(unsigned char *raw, unsigned char *mixed) 
+{
+
+        int i = 0;
+        
+        for (i = 0; i < 14; i += 2)
+                *mixed++ = *(raw + i);
+        
+        for (i = 1; i < 14; i += 2)
+                *mixed++ = *(raw + i);
+                
+}
+
+void replace_mixed2raw(unsigned char *mixed, unsigned char *raw) 
+{
+
+        int i = 0;
+        
+        for (i = 0; i < 14; i += 2)
+                *(raw + i) = *mixed++;
+        
+        for (i = 1; i < 14; i += 2)
+                *(raw + i) = *mixed++;
+                
+}
+
 void prepare_password(unsigned char *charpassword, struct pass *password) 
 {
     
         unsigned char *rawarr = calloc(15, 1);
+        unsigned char *mixedarr = calloc(15, 1);
+        
         int i = 0;
-        pass2arr(charpassword, rawarr);
+        pass2arr(charpassword, mixedarr);
+        
+        replace_mixed2raw(mixedarr ,rawarr);
     
         password->keyskeyaddress  = arr2long(rawarr, 5);
         password->dataskeyaddress = arr2long(rawarr + 5, 5);
         password->skeysize = (unsigned int) arr2long(rawarr + 10, 4);
     
         free(rawarr);
+        free(mixedarr);
     
 }
 
@@ -123,13 +154,18 @@ void make_password(unsigned char *outpassword, unsigned int skeysize, unsigned l
 {
 
         unsigned char *rawarr = calloc(15, 1);
+        unsigned char *mixedarr = calloc(15, 1);
+        
         int i = 0;
     
         long2arr(keyskeyaddress, rawarr, 5);
         long2arr(dataskeyaddress, rawarr + 5, 5);
         long2arr((unsigned long long int) skeysize, rawarr + 10, 4);
+        
+        replace_raw2mixed(rawarr, mixedarr);
     
-        arr2pass(rawarr, outpassword);
-    
+        arr2pass(mixedarr, outpassword);
+        
+        free(mixedarr);
         free(rawarr);
 }
