@@ -269,6 +269,7 @@ void make_skey(int device, unsigned long long int devicesize, unsigned long long
                                 }      
                 
                         }
+                        
      
                 }  else {
             
