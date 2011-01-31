@@ -31,7 +31,7 @@
 
 #define MAXLEVEL 2000
 
-//#define DEV 1
+#define DEV 1
 
 #define CONFIGSTRINGMAXLEN 1024
 
