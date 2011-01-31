@@ -239,8 +239,6 @@ void make_skey(int device, unsigned long long int devicesize, unsigned long long
                         unsigned long long int previous = get_next_block_address(device, rnd, skip, blocksize, BACKWARD);
                 
                         int max = next - previous;
-                
-                        printf("DBG\n");
                
                         while (!flag) {
                 
@@ -271,6 +269,7 @@ void make_skey(int device, unsigned long long int devicesize, unsigned long long
                                 }      
                 
                         }
+                        
      
                 }  else {
             
