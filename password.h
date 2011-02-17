@@ -1,7 +1,7 @@
 /*
  * Functions for making and transforming password.
  *
- * Copyright (C) 2010 Denis Yakunchikov <toi.yaku@gmail.com>
+ * Copyright (C) 2011 Denis Yakunchikov <toi.yaku@gmail.com>
  *
  * This file is licensed under GPLv3.
  *
