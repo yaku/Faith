@@ -3,6 +3,8 @@ filetables
 New make_skey algorithms
 GUI
 read and write mbr and boot partition
+new table with / 
+random first file of archive
 
 long:
 Double buffering for make_skey, write_by_skey, get_data functions
