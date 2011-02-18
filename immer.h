@@ -266,6 +266,47 @@ void get_next_space(device *device, unsigned long long address, int direction, s
         
 }
 
+unsigned long long int get_skey_in_space(device *device, space *space, int blocksize) 
+{
+
+        int subrnd = 0;
+                
+        int flag = 0;
+        
+        unsigned long long int result = 0;
+                
+        int max = space->end - space->begin;
+               
+        while (!flag) {
+                
+                subrnd = rand() % max;
+                    
+                if (is_free(device, space->begin + subrnd, blocksize)) {
+            
+                        result = space->begin + subrnd;
+                        set_flags(device, space->begin + subrnd, blocksize);
+                    
+                        flag = 1;
+            
+                } else if (is_free(device, space->begin + subrnd - blocksize, blocksize)) {
+            
+                        result = space->begin + subrnd - blocksize;
+                        set_flags(device, space->begin + subrnd - blocksize, blocksize);
+
+                        flag = 1;
+            
+                } else {
+                    
+                        max = subrnd;
+                    
+                }      
+                
+        }
+        
+        return result;
+
+}
+
 
 void make_skey(device *device, unsigned long long int *skey, unsigned int keysize, int blocksize) 
 {
@@ -294,45 +335,19 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
             
                 } else if (get_next_block_address(device, rnd, FORWARD, 0) - \
                            get_next_block_address(device, rnd, BACKWARD, 0) > blocksize) {
-                   
-                        int subrnd = 0;
-                
-                        int flag = 0;
-                
-                        unsigned long long int next = get_next_block_address(device, rnd, FORWARD, 0);
-                        unsigned long long int previous = get_next_block_address(device, rnd, BACKWARD, 0);
-                
-                        int max = next - previous;
-               
-                        while (!flag) {
-                
-                                subrnd = rand() % max;
-                    
-                                if (is_free(device, previous + subrnd, blocksize)) {
-            
-                                        *skey++ = previous + subrnd;
-                                        completed++;
-                                        set_flags(device, previous + subrnd, blocksize);
-                    
-                                        level = 0;
-                                        flag = 1;
-            
-                                } else if (is_free(device, previous + subrnd - blocksize, blocksize)) {
-            
-                                        *skey++ = previous + subrnd - blocksize;
-                                        completed++;
-                                        set_flags(device, previous + subrnd - blocksize, blocksize);
-                    
-                                        level = 0; 
-                                        flag = 1;
-            
-                                } else {
-                    
-                                        max = subrnd;
-                    
-                                }      
-                
-                        }
+                        
+                        space space = { 
+                        
+                                get_next_block_address(device, rnd, BACKWARD, 0),
+                                get_next_block_address(device, rnd, FORWARD, 0)
+                        
+                        };
+                        
+                        *skey++ = get_skey_in_space(device, &space, blocksize);
+                        
+                        completed++;
+                        level = 0;
+                        printf("USE\n");
                         
      
                 }  else {
@@ -352,7 +367,81 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
                 }
 
                 if (level == MAXLEVEL) {
-        
+                /*
+                        int directionflag=0b100;
+                        unsigned long long int next = get_next_block_address(device, rnd, FORWARD, 0);
+                        unsigned long long int previous = get_next_block_address(device, rnd, BACKWARD, 0);
+                        
+                        space nextspace;
+                        space previousspace;
+                        
+                        int ok = 0;
+                        
+                        while (directionflag != 0b11) {
+                        
+                                switch (directionflag) 
+                                case 0b01: {
+                                        
+                                        while (!ok) {
+                                                
+                                                
+                                                get_next_space(device, previous, BACKWARD, &previousspace);
+                                                
+                                                if (previousspace.begin < 1024)
+                                                        pdie("Near zero");
+                                                
+                                                if ((previousspace.end - previousspace.end) > blocksize) {
+                                              
+                                                        int subrnd = 0;
+                
+                                                        int flag = 0;
+                
+                                                        int max = previousspace.end - previousspace.begin;
+               
+                                                        while (!flag) {
+                
+                                                                subrnd = rand() % max;
+                    
+                                                                if (is_free(device, previous + subrnd, blocksize)) {
+            
+                                                                        *skey++ = previous + subrnd;
+                                                                        completed++;
+                                                                        set_flags(device, previous + subrnd, blocksize);
+                    
+                                                                        level = 0;
+                                                                        flag = 1;
+            
+                                                                } else if (is_free(device, previous + subrnd - blocksize, blocksize)) {
+            
+                                                                        *skey++ = previous + subrnd - blocksize;
+                                                                        completed++;
+                                                                        set_flags(device, previous + subrnd - blocksize, blocksize);
+                    
+                                                                        level = 0; 
+                                                                        flag = 1;
+            
+                                                                } else {
+                    
+                                                                        max = subrnd;
+                    
+                                                                }      
+                
+                                                        }
+                                                        
+                                                        ok = 1;
+                                               
+                                                }
+                                                
+                                                
+                                                
+                                                
+                                        }
+                                
+                                
+                                }
+                        
+                        }
+        */
                         printf("Input is too big for this device\nExiting.\n");
                         exit(1);
         
