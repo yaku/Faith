@@ -1,7 +1,7 @@
 /*
  * Functions for making and transforming password.
  *
- * Copyright (C) 2010 Denis Yakunchikov <toi.yaku@gmail.com>
+ * Copyright (C) 2011 Denis Yakunchikov <toi.yaku@gmail.com>
  *
  * This file is licensed under GPLv3.
  *
@@ -18,7 +18,7 @@ struct pass {
 void stage2pass(unsigned long long int stage, unsigned char *pass, int sixbitsequences) 
 {
 
-        unsigned char table[] = "@1234567890abcdefghijklmnopqrstuvwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";    
+        unsigned char table[] = "/1234567890abcdefghijklmnopqrstuvwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";    
     
         int i = 0;
     
@@ -30,7 +30,7 @@ void stage2pass(unsigned long long int stage, unsigned char *pass, int sixbitseq
 unsigned long long int pass2stage( unsigned char *pass, int sixbitsequences) 
 {
 
-        unsigned char table[] = "@1234567890abcdefghijklmnopqrstuvwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        unsigned char table[] = "/1234567890abcdefghijklmnopqrstuvwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
         unsigned long long int stage = 0;
         int i = 0;
