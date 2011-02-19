@@ -1,7 +1,7 @@
 /*
  * Constants.
  *
- * Copyright (C) 2010 Denis Yakunchikov <toi.yaku@gmail.com>
+ * Copyright (C) 2010, 2011 Denis Yakunchikov <toi.yaku@gmail.com>
  *
  * This file is licensed under GPLv3.
  *
@@ -38,5 +38,7 @@
 #define DEVURANDOM 1
 #define SLRAND 2
 
-#define FORWARD 1
+#define BOTH     0
+#define FORWARD  1
 #define BACKWARD 2
+#define BAD      3

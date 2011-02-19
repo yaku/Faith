@@ -1,14 +1,28 @@
 /*
  * Immersion library.
  *
- * Copyright (C) 2010 Denis Yakunchikov <toi.yaku@gmail.com>
+ * Copyright (C) 2010, 2011 Denis Yakunchikov <toi.yaku@gmail.com>
  *
  * This file is licensed under GPLv3.
  *
  */
+ 
+typedef struct device {
+ 
+        int descriptor;
+        unsigned long long int size;
+        unsigned int skip;
 
+} device;
 
-int is_free(int device, unsigned long long int adress, unsigned int length, unsigned int skip) 
+typedef struct space {
+
+        unsigned long long int begin;
+        unsigned long long int end;
+
+} space;
+
+int is_free(device *device, unsigned long long int adress, unsigned int length) 
 {
 
         unsigned char *buffer = (unsigned char *) malloc(length);
@@ -16,9 +30,9 @@ int is_free(int device, unsigned long long int adress, unsigned int length, unsi
         int flag = 0;
         int i = 0;
     
-        lseek(device, adress+skip, SEEK_SET);
+        lseek(device->descriptor, adress + device->skip, SEEK_SET);
     
-        if (read(device, buffer, length) > 0) {
+        if (read(device->descriptor, buffer, length) > 0) {
     
                 for (i = 0; i < length; i++) {
     
@@ -44,10 +58,10 @@ int is_free(int device, unsigned long long int adress, unsigned int length, unsi
 
 }
 
-void fill_random(int device, unsigned int blocks, unsigned int skip, int type) 
+void fill_random(device *device, unsigned int blocks, int type) 
 { 
 
-        lseek(device, skip, SEEK_SET);
+        lseek(device->descriptor, device->skip, SEEK_SET);
     
         if (type == DEVURANDOM) {
     
@@ -65,7 +79,7 @@ void fill_random(int device, unsigned int blocks, unsigned int skip, int type)
                         if (read(urandom, buffer, BLOCKSIZE) < 0)
                                 pdie("Read failed");
             
-                        if (write(device, buffer, BLOCKSIZE) < 0)
+                        if (write(device->descriptor, buffer, BLOCKSIZE) < 0)
                                 pdie("Write failed");
     
                 }
@@ -82,7 +96,7 @@ void fill_random(int device, unsigned int blocks, unsigned int skip, int type)
                         for(i = 0; i < BLOCKSIZE; i++)
                                 *(randomblock+i) = rand() % 256;
                 
-                        if (write(device, randomblock, BLOCKSIZE) < 0)
+                        if (write(device->descriptor, randomblock, BLOCKSIZE) < 0)
                                 pdie("Write failed");
                 }
         
@@ -91,47 +105,47 @@ void fill_random(int device, unsigned int blocks, unsigned int skip, int type)
 
 }
 
-void fill_zero(int device, unsigned int blocks, unsigned int skip) 
+void fill_zero(device *device, unsigned int blocks) 
 {
 
-        lseek(device, skip, SEEK_SET);
+        lseek(device->descriptor, device->skip, SEEK_SET);
         unsigned char *zeros = (unsigned char *) malloc(BLOCKSIZE);
         memset(zeros, 0x00, BLOCKSIZE);
     
         while (blocks--)
-                if (write(device, zeros, BLOCKSIZE) < 0)
+                if (write(device->descriptor, zeros, BLOCKSIZE) < 0)
                         pdie("Write failed");
     
         free(zeros);
 
 }
 
-void write_data(int device, void *block, unsigned int length, unsigned long long int address, unsigned int skip) 
+void write_data(device *device, void *block, unsigned int length, unsigned long long int address) 
 {
 
-        lseek(device,address+skip,SEEK_SET);
-        if (write(device, block, length) < 0)
+        lseek(device->descriptor, address + device->skip, SEEK_SET);
+        if (write(device->descriptor, block, length) < 0)
                 pdie("Write failed");
 
 }
 
-void read_data(int device, void *block, unsigned int length, unsigned long long int address, unsigned int skip) 
+void read_data(device *device, void *block, unsigned int length, unsigned long long int address) 
 {
 
-        lseek(device, address+skip, SEEK_SET);
-        if (read(device, block, length) < 0)
+        lseek(device->descriptor, address + device->skip, SEEK_SET);
+        if (read(device->descriptor, block, length) < 0)
                 pdie("Read failed");
 
 }
 
-void set_flags(int device, unsigned long long int address, unsigned int length, unsigned int skip) 
+void set_flags(device *device, unsigned long long int address, unsigned int length) 
 {
 
         unsigned char *flags = (unsigned char *) malloc(length);
         memset(flags, 0x80, length);
     
-        lseek(device, address+skip, SEEK_SET);
-        if (write(device, flags, length) < 0)
+        lseek(device->descriptor, address + device->skip, SEEK_SET);
+        if (write(device->descriptor, flags, length) < 0)
                 pdie("Write failed");
     
         free(flags);
@@ -156,42 +170,73 @@ void archive2skey(unsigned long long int *skey, unsigned char *buffer, unsigned 
 
 }
 
-unsigned long long int get_next_block_address(int device, unsigned long long address, unsigned int skip, unsigned int blocksize, int direction) 
+unsigned long long int get_next_block_address(device *device, unsigned long long address, int direction, int inblock) 
 {
 
         int offset = 0;
         int i = 0;
+        int flag = 0;
+        int blockcounter = 0;
     
-        unsigned char *block = malloc(blocksize);
+        unsigned char *block = malloc(BLOCKSIZE);
     
         if (direction == FORWARD) {
-    
-                read_data(device, block, blocksize, address, skip);
+                
+                while (!flag) {
+                
+                        read_data(device, block, BLOCKSIZE, address + BLOCKSIZE * blockcounter);
         
-                for (i = 0; i < blocksize; i++) {
-        
-                        if (*(block + i) == 0)
-                                offset++;
-                        else
-                                break;
-        
-                }    
+                        for (i = 0; i < BLOCKSIZE; i++) {
+                                
+                                if (inblock) 
+                                        if (*(block + i) != 0)
+                                                offset++;
+                                        else {
+                                                flag = 1;
+                                                break;
+                                        }
+                                else
+                                        if (*(block + i) == 0)
+                                                offset++;
+                                        else {
+                                                flag = 1;
+                                                break;
+                                        }
+                
+                        }    
+                        
+                        blockcounter++;
+                }
         
         }
     
         if (direction == BACKWARD) {
     
-                read_data(device, block, blocksize, address-blocksize, skip);
+                while (!flag) {
+                
+                        read_data(device, block, BLOCKSIZE, address - BLOCKSIZE * (blockcounter + 1));
         
-                for (i = blocksize - 1; i > 0; i--) {
+                        for (i = BLOCKSIZE - 1; i > 0; i--) {
         
-                        if (*(block + i) == 0)
-                                offset++;
-                        else
-                                break;
+                                if (inblock) 
+                                        if (*(block + i) != 0)
+                                                offset++;
+                                        else {
+                                                flag = 1;
+                                                break;
+                                        }
+                                else
+                                        if (*(block + i) == 0)
+                                                offset++;
+                                        else {
+                                                flag = 1;
+                                                break;
+                                        }
         
-                }   
-        
+                        }
+                        
+                        blockcounter++;   
+                }
                 offset = -offset; 
         
         }
@@ -202,85 +247,164 @@ unsigned long long int get_next_block_address(int device, unsigned long long add
 
 }
 
+void get_next_space(device *device, unsigned long long address, int direction, space *space) 
+{
 
-void make_skey(int device, unsigned long long int devicesize, unsigned long long int *skey, unsigned int keysize, int blocksize, unsigned int skip) 
+        if (direction == FORWARD) {
+                
+                space->begin = get_next_block_address(device, address, direction, 1);
+                space->end = get_next_block_address(device, space->begin, direction, 0);
+                
+        }
+        
+        if (direction == BACKWARD) {
+                
+                space->end = get_next_block_address(device, address, direction, 1);
+                space->begin = get_next_block_address(device, space->end - 1, direction, 0);
+        
+        }
+        
+}
+
+unsigned long long int get_skey_in_space(device *device, space *space, int blocksize) 
+{
+
+        int subrnd = 0;
+                
+        int flag = 0;
+        
+        unsigned long long int result = 0;
+                
+        int max = space->end - space->begin;
+               
+        while (!flag) {
+                
+                subrnd = rand() % max;
+                    
+                if (is_free(device, space->begin + subrnd, blocksize)) {
+            
+                        result = space->begin + subrnd;
+                        set_flags(device, space->begin + subrnd, blocksize);
+                    
+                        flag = 1;
+            
+                } else if (is_free(device, space->begin + subrnd - blocksize, blocksize)) {
+            
+                        result = space->begin + subrnd - blocksize;
+                        set_flags(device, space->begin + subrnd - blocksize, blocksize);
+
+                        flag = 1;
+            
+                } else {
+                    
+                        max = subrnd;
+                    
+                }      
+                
+        }
+        
+        return result;
+
+}
+
+
+void make_skey(device *device, unsigned long long int *skey, unsigned int keysize, int blocksize) 
 {
 
         unsigned long long int rnd = 0;
         unsigned int completed = 0;
         int level = 0;
+        
+        int flag;
+        int ok;
+        
+        space zerospace = {0, 0};
     
         while (completed < keysize) {
         
-                rnd = rand() % (devicesize - blocksize);
+                rnd = rand() % (device->size - blocksize);
         
-                if (is_free(device, rnd, blocksize, skip)) {
+                if (is_free(device, rnd, blocksize)) {
             
                         *skey++ = rnd;
                         completed++;
-                        set_flags(device, rnd, blocksize, skip);
+                        set_flags(device, rnd, blocksize);
                         level = 0;
             
-                } else if (is_free(device, rnd - blocksize, blocksize, skip)) {
+                } else if (is_free(device, rnd - blocksize, blocksize)) {
             
                         *skey++ = rnd - blocksize;
                         completed++;
-                        set_flags(device, rnd - blocksize, blocksize, skip);
+                        set_flags(device, rnd - blocksize, blocksize);
                         level = 0;
             
-                } else if (get_next_block_address(device, rnd, skip, blocksize, FORWARD) - \
-                   get_next_block_address(device, rnd, skip, blocksize, BACKWARD) > blocksize) {
-                   
-                        int subrnd = 0;
-                
-                        int flag = 0;
-                
-                        unsigned long long int next = get_next_block_address(device, rnd, skip, blocksize, FORWARD);
-                        unsigned long long int previous = get_next_block_address(device, rnd, skip, blocksize, BACKWARD);
-                
-                        int max = next - previous;
-               
-                        while (!flag) {
-                
-                                subrnd = rand() % max;
-                    
-                                if (is_free(device, previous + subrnd, blocksize, skip)) {
-            
-                                        *skey++ = previous + subrnd;
-                                        completed++;
-                                        set_flags(device, previous + subrnd, blocksize, skip);
-                    
-                                        level = 0;
-                                        flag = 1;
-            
-                                } else if (is_free(device, previous + subrnd - blocksize, blocksize, skip)) {
-            
-                                        *skey++ = previous + subrnd - blocksize;
-                                        completed++;
-                                        set_flags(device, previous + subrnd - blocksize, blocksize, skip);
-                    
-                                        level = 0; 
-                                        flag = 1;
-            
-                                } else {
-                    
-                                        max = subrnd;
-                    
-                                }      
-                
-                        }
+                } else if (get_next_block_address(device, rnd, FORWARD, 0) - \
+                           get_next_block_address(device, rnd, BACKWARD, 0) >= blocksize) {
                         
+                        space space = { 
+                        
+                                get_next_block_address(device, rnd, BACKWARD, 0),
+                                get_next_block_address(device, rnd, FORWARD, 0)
+                        
+                        };
+                        
+                        *skey++ = get_skey_in_space(device, &space, blocksize);
+                        
+                        completed++;
+                        level = 0;
      
                 }  else {
-            
+
                         level += 1;
             
                 }
 
                 if (level == MAXLEVEL) {
-        
-                        printf("Input is too big for this device\nExiting.\n");
-                        exit(1);
+                
+                        flag = 1;
+                        ok   = 0;
+                        
+                        space nextspace;
+                        
+                        while (flag && !ok) {
+                                        
+                                nextspace = zerospace;
+                                        
+                                while (!ok) {
+                                                
+                                        get_next_space(device, nextspace.end, FORWARD, &nextspace);
+                                        
+                                        if ((device->size - nextspace.begin) < 1024) {
+                                        
+                                                printf("Error: Near EOF\n");
+                                                flag = 0;
+                                                break;
+                                                
+                                        }
+                                        
+                                        if ((nextspace.end - nextspace.begin) >= blocksize) {
+                                        
+                                                *skey++ = get_skey_in_space(device, &nextspace, blocksize);        
+                                                ok = 1;
+                                                
+                                                level = 0;
+                                                completed++;
+                                                
+                                                zerospace = nextspace; /*if keysize > 1 this operation brings good optimization*/
+                                                
+                                        } 
+                                        
+                                }
+                        }
+                                        
+                                       
+                        
+                        if (!flag) {
+                        
+                                printf("Input is too big for this device\nExiting.\n");
+                                exit(1);
+                        
+                        }
         
                 }
     
@@ -289,7 +413,7 @@ void make_skey(int device, unsigned long long int devicesize, unsigned long long
 
 }
 
-void make_skey_main(int device, unsigned long long int devicesize, int skeyfile, unsigned int keysize, unsigned int skip) 
+void make_skey_main(device *device, int skeyfile, unsigned int keysize) 
 {
     
         unsigned int i = 0; 
@@ -298,7 +422,7 @@ void make_skey_main(int device, unsigned long long int devicesize, int skeyfile,
 
         for (i = 0; i < keysize; i++) {
     
-                make_skey(device, devicesize, &skey, 1, BLOCKSIZE, skip);
+                make_skey(device, &skey, 1, BLOCKSIZE);
                 skey2archive(&skey, buffer, 1);
                 write(skeyfile, buffer, SKEYRECORDSIZE);
 
@@ -308,7 +432,7 @@ void make_skey_main(int device, unsigned long long int devicesize, int skeyfile,
 
 }
 
-void write_by_skey(int device, int datafile, int skeyfile, unsigned int blocks, unsigned int skip) 
+void write_by_skey(device *device, int datafile, int skeyfile, unsigned int blocks) 
 {
 
         unsigned long long int skey = 0;
@@ -325,7 +449,7 @@ void write_by_skey(int device, int datafile, int skeyfile, unsigned int blocks, 
                 archive2skey(&skey, buffer, 1);
 
                 read(datafile, block, BLOCKSIZE);
-                write_data(device, block, BLOCKSIZE, skey, skip);
+                write_data(device, block, BLOCKSIZE, skey);
 
         }
     
@@ -334,7 +458,7 @@ void write_by_skey(int device, int datafile, int skeyfile, unsigned int blocks, 
 
 }
 
-void get_data(int device, int datafile, unsigned long long int skeyaddress, unsigned int skeysize, unsigned int skip) 
+void get_data(device *device, int datafile, unsigned long long int skeyaddress, unsigned int skeysize) 
 {
 
         unsigned long long int skey = 0;
@@ -346,10 +470,10 @@ void get_data(int device, int datafile, unsigned long long int skeyaddress, unsi
     
         for(i = 0; i < skeysize; i++) {
     
-                read_data(device, buffer, SKEYRECORDSIZE, skeyaddress + i * SKEYRECORDSIZE, skip);
+                read_data(device, buffer, SKEYRECORDSIZE, skeyaddress + i * SKEYRECORDSIZE);
                 archive2skey(&skey, buffer, 1);
 
-                read_data(device, block, BLOCKSIZE, skey, skip);
+                read_data(device, block, BLOCKSIZE, skey);
                 write(datafile, block, BLOCKSIZE);    
         }
     
@@ -368,21 +492,21 @@ unsigned long long int file_size(unsigned char *filename)
 
 }
 
-unsigned long long int buffer_for_skey(int device, unsigned long long int devicesize, unsigned int skeylen, unsigned int skip) 
+unsigned long long int buffer_for_skey(device *device, unsigned int skeylen) 
 {
 
         unsigned long long int result = 0;
 
-        make_skey(device, devicesize, &result, 1, skeylen * SKEYRECORDSIZE, skip);    
+        make_skey(device, &result, 1, skeylen * SKEYRECORDSIZE);    
     
         return result;
 
 }
 
-void write_skey(int device, int skeyfile, unsigned int skeylen, unsigned long long int address, unsigned int skip) 
+void write_skey(device *device, int skeyfile, unsigned int skeylen, unsigned long long int address) 
 {
 
-        lseek(device, address + skip, SEEK_SET);
+        lseek(device->descriptor, address + device->skip, SEEK_SET);
         lseek(skeyfile, 0, SEEK_SET);
     
         unsigned char *block = calloc(BLOCKSIZE, 1);
@@ -393,7 +517,7 @@ void write_skey(int device, int skeyfile, unsigned int skeylen, unsigned long lo
                 if ((readchars = read(skeyfile, block, BLOCKSIZE)) < 0)
                         pdie("Read failed");
         
-                if (write(device, block, readchars) < 0)
+                if (write(device->descriptor, block, readchars) < 0)
                         pdie("Write failed");
         
         } 
@@ -402,13 +526,13 @@ void write_skey(int device, int skeyfile, unsigned int skeylen, unsigned long lo
 
 }
 
-unsigned long long int device_size(int device) 
+unsigned long long int device_size(device *device) 
 {
 
         unsigned long long size = 0;
 
         #ifdef DEV
-        if(ioctl(device, BLKGETSIZE64, &size) != -1)
+        if(ioctl(device->descriptor, BLKGETSIZE64, &size) != -1)
                 ;
         else
                 pdie("Getting device size failed");
@@ -422,7 +546,7 @@ unsigned long long int device_size(int device)
 
 }
 
-unsigned long long int set_skip(int fd) /**/
+unsigned long long int set_skip(device *device) /**/
 { 
 
         return 512;
@@ -435,7 +559,7 @@ void write_boot_partition() {}
 void immer_main(int mode, char *devicename, char *datafilename, char *keyfilename, char *charpassword, char *dataskeyfilename, char *keyskeyfilename) 
 {
 
-        int device;
+        device device;
     
         int datafile;
         int keyfile;
@@ -449,13 +573,11 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         struct pass password = {0, 0, 0}; 
     
         unsigned int skeysize = 0;
-        unsigned long long int devicesize = 0;
         unsigned long long int datalen = 0;
-        unsigned int skip = 0;
     
         printf("Opening device...");
-        device = open(devicename, O_RDWR);
-        if (device < 0)
+        device.descriptor = open(devicename, O_RDWR);
+        if (device.descriptor < 0)
                 pdie("Device open failed. Maybe wrong device selected?");
         
         printf(".done\n");
@@ -490,12 +612,12 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         /*End of Open files*/
     
         printf("Getting device size...");
-        devicesize = device_size(device); 
-        printf(".done %lld\n", devicesize);  
+        device.size = device_size(&device); 
+        printf(".done %lld\n", device.size);  
     
         printf("Setting skip for mbr and boot partition...");
-        skip = set_skip(device);
-        printf(".done %u\n", skip);  
+        device.skip = set_skip(&device);
+        printf(".done %u\n", device.skip);  
     
     
         printf("Initialising random number numbers generator...");
@@ -505,7 +627,7 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         unsigned long long int dataskeyaddress = 0;
         unsigned long long int keyskeyaddress = 0;  
     
-        devicesize -= skip;
+        device.size -= device.skip;
     
         printf("Reading configuration file...");
         config conf;
@@ -523,40 +645,40 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 printf(".done %u\n", skeysize);
     
                 printf("Preparing device. All data will be destroyed...");
-                fill_zero(device, devicesize / BLOCKSIZE, skip);
+                fill_zero(&device, device.size / BLOCKSIZE);
                 puts(".done\n");
         
                 printf("Setting buffers for data skey and key skey...");
-                dataskeyaddress = buffer_for_skey(device, devicesize, skeysize, skip);
-                keyskeyaddress  = buffer_for_skey(device, devicesize, skeysize, skip);
+                dataskeyaddress = buffer_for_skey(&device, skeysize);
+                keyskeyaddress  = buffer_for_skey(&device, skeysize);
                 printf(".done\n");
         
                 printf("Making skey for data...");
-                make_skey_main(device, devicesize, dataskeyfile, skeysize, skip);
+                make_skey_main(&device, dataskeyfile, skeysize);
                 printf(".done\n");
         
                 printf("Making skey for key...");
-                make_skey_main(device, devicesize, keyskeyfile, skeysize, skip);
+                make_skey_main(&device, keyskeyfile, skeysize);
                 printf(".done\n");    
         
                 printf("Filling device with random data...");
-                fill_random(device, devicesize / BLOCKSIZE, skip, conf.randomizer);
+                fill_random(&device, device.size / BLOCKSIZE, conf.randomizer);
                 printf(".done\n");
         
                 lseek(dataskeyfile, 0, SEEK_SET);
                 lseek(keyskeyfile, 0, SEEK_SET);
         
                 printf("Writing data by skey...");
-                write_by_skey(device, datafile, dataskeyfile, skeysize, skip);
+                write_by_skey(&device, datafile, dataskeyfile, skeysize);
                 printf(".done\n");
         
                 printf("Writing key by skey...");
-                write_by_skey(device, keyfile, keyskeyfile, skeysize, skip);
+                write_by_skey(&device, keyfile, keyskeyfile, skeysize);
                 printf(".done\n");
         
                 printf("Writing skey's...");
-                write_skey(device, dataskeyfile, skeysize * SKEYRECORDSIZE, dataskeyaddress, skip);
-                write_skey(device, keyskeyfile, skeysize * SKEYRECORDSIZE, keyskeyaddress, skip);
+                write_skey(&device, dataskeyfile, skeysize * SKEYRECORDSIZE, dataskeyaddress);
+                write_skey(&device, keyskeyfile, skeysize * SKEYRECORDSIZE, keyskeyaddress);
                 printf(".done\n");
         
                 unsigned char *outpassword = calloc(20, 1);
@@ -578,18 +700,18 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 printf(".done %u\n", skeysize);
 
                 printf("Getting data by skey...");
-                get_data(device, outdatafile, password.dataskeyaddress, skeysize, skip);
+                get_data(&device, outdatafile, password.dataskeyaddress, skeysize);
                 printf(".done\n");
         
                 printf("Getting key by skey...");   
-                get_data(device, outkeyfile, password.keyskeyaddress, skeysize, skip);   
+                get_data(&device, outkeyfile, password.keyskeyaddress, skeysize);   
                 printf(".done\n");
         }
    
     
         /*Close files*/
 
-        close(device);
+        close(device.descriptor);
         if (mode == ENCRYPT) {
                 close(datafile);
                 close(keyfile);
