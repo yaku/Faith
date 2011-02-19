@@ -314,6 +314,11 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
         unsigned long long int rnd = 0;
         unsigned int completed = 0;
         int level = 0;
+        
+        int flag;
+        int ok;
+        
+        space zerospace = {0, 0};
     
         while (completed < keysize) {
         
@@ -334,7 +339,7 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
                         level = 0;
             
                 } else if (get_next_block_address(device, rnd, FORWARD, 0) - \
-                           get_next_block_address(device, rnd, BACKWARD, 0) > blocksize) {
+                           get_next_block_address(device, rnd, BACKWARD, 0) >= blocksize) {
                         
                         space space = { 
                         
@@ -356,154 +361,50 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
 
                 if (level == MAXLEVEL) {
                 
-                        int direction = BOTH;
+                        flag = 1;
+                        ok   = 0;
                         
-                        space zerospace = {
-                        
-                                get_next_block_address(device, rnd, FORWARD, 0),
-                                get_next_block_address(device, rnd, BACKWARD, 0)
-                        
-                        };
-                        
-                        printf("\nDEBUG USE\n");
                         space nextspace;
-                        space previousspace;
                         
-                        int ok = 0;
-                        
-                        while ((direction != BAD) && (ok != 1)) {
-                        
-                                switch (direction) {
-                                case BACKWARD: 
+                        while (flag && !ok) {
                                         
-                                        previousspace = zerospace;
+                                nextspace = zerospace;
                                         
-                                        while (!ok) {
+                                while (!ok) {
+                                                
+                                        get_next_space(device, nextspace.end, FORWARD, &nextspace);
                                         
-                                                printf("BACKWARD\n");
-                                                
-                                                get_next_space(device, previousspace.begin, BACKWARD, &previousspace);
-                                                
-                                                if (nextspace.begin < 1024) {
-                                                        printf("Warning: Near zero\n");
-                                                        direction = BAD;
-                                                        
-                                                }
-                                                
-                                                if ((previousspace.end - previousspace.begin) > blocksize) {
-                                                
-                                                        *skey++ = get_skey_in_space(device, &previousspace, blocksize);        
-                                                        ok = 1;
-                                                        
-                                                        level = 0;
-                                                        completed++;
-                                               
-                                                } 
+                                        if ((device->size - nextspace.begin) < 1024) {
+                                        
+                                                printf("Error: Near EOF\n");
+                                                flag = 0;
+                                                break;
                                                 
                                         }
                                         
-                                        break;
-                                
-                                case FORWARD:
+                                        if ((nextspace.end - nextspace.begin) >= blocksize) {
                                         
-                                        nextspace = zerospace;
+                                                *skey++ = get_skey_in_space(device, &nextspace, blocksize);        
+                                                ok = 1;
+                                                
+                                                level = 0;
+                                                completed++;
+                                                
+                                                zerospace = nextspace; /*if keysize > 1 this operation brings good optimization*/
+                                                
+                                        } 
                                         
-                                        while (!ok) {
-                                                
-                                                printf("FORWARD\n");
-                                                
-                                                get_next_space(device, nextspace.end, FORWARD, &nextspace);
-                                                
-                                                if (nextspace.begin > (device->size - 1024)) {
-                                                        printf("Warning: Near EOF\n");
-                                                        direction = BAD;
-                                                        
-                                                }
-                                                
-                                                if ((nextspace.end - nextspace.begin) > blocksize) {
-                                                
-                                                        *skey++ = get_skey_in_space(device, &nextspace, blocksize);        
-                                                        ok = 1;
-                                                        
-                                                        level = 0;
-                                                        completed++;
-                                                        
-                                                        printf("OK\n");
-                                                } 
-                                                
-                                        }
-                                        
-                                        break;
-                                        
-                                case BOTH:
-                                
-                                        previousspace = zerospace;
-                                        nextspace = zerospace;
-                                        
-                                        while (!ok) {
-                                                
-                                                printf("BOTH\n");
-                                                
-                                                get_next_space(device, nextspace.begin, FORWARD, &nextspace);
-                                                
-                                                if (nextspace.begin > (device->size - 1024)) {
-                                                        printf("Warning: Near EOF\n");
-                                                        direction = BACKWARD;
-                                                        break;
-                                                }
-                                                
-                                                
-                                                if ((nextspace.end - nextspace.begin) > blocksize) {
-                                                
-                                                        *skey++ = get_skey_in_space(device, &nextspace, blocksize);        
-                                                        ok = 1;
-                                                        
-                                                        level = 0;
-                                                        completed++;
-                                                        
-                                                        break;
-                                               
-                                                }
-                                                
-                                                get_next_space(device, previousspace.begin, BACKWARD, &previousspace);
-                                                
-                                                if (nextspace.begin < 1024) {
-                                                        printf("Warning: Near zero\n");
-                                                        direction = FORWARD;
-                                                        break;
-                                                }
-                                                
-                                                if ((previousspace.end - previousspace.begin) > blocksize) {
-                                                
-                                                        *skey++ = get_skey_in_space(device, &previousspace, blocksize);        
-                                                        ok = 1;
-                                                        
-                                                        level = 0;
-                                                        completed++;
-                                                        
-                                                        break;
-                                               
-                                                }  
-                                                
-                                        }
-                                        
-                                        break;
-                                        
-                                        
-                                
                                 }
-                                
-                        
                         }
+                                        
+                                       
                         
-                        if (direction == BAD) {
+                        if (!flag) {
                         
                                 printf("Input is too big for this device\nExiting.\n");
                                 exit(1);
                         
                         }
-                        
-                        printf("NEXT\n");
         
                 }
     
