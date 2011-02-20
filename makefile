@@ -1,4 +1,4 @@
-CFLAGS = 
+CFLAGS = -pg
 
 CC = gcc
 LIBS =  -lm 

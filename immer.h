@@ -105,17 +105,22 @@ void fill_random(device *device, unsigned int blocks, int type)
 
 }
 
-void fill_zero(device *device, unsigned int blocks) 
+void fill_zero(device *device, unsigned long long int bytes) 
 {
 
         lseek(device->descriptor, device->skip, SEEK_SET);
-        unsigned char *zeros = (unsigned char *) malloc(BLOCKSIZE);
-        memset(zeros, 0x00, BLOCKSIZE);
+        unsigned char *zeros = (unsigned char *) calloc(1, BBUFFER_SIZE);
     
-        while (blocks--)
-                if (write(device->descriptor, zeros, BLOCKSIZE) < 0)
+        while (bytes > BBUFFER_SIZE) {
+                if (write(device->descriptor, zeros, BBUFFER_SIZE) < 0)
                         pdie("Write failed");
-    
+                
+                bytes -= BBUFFER_SIZE;
+        }
+        
+        if (write(device->descriptor, zeros, bytes) < 0)
+                pdie("Write failed");
+        
         free(zeros);
 
 }
@@ -390,8 +395,6 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
                                                 level = 0;
                                                 completed++;
                                                 
-                                                zerospace = nextspace; /*if keysize > 1 this operation brings good optimization*/
-                                                
                                         } 
                                         
                                 }
@@ -645,7 +648,7 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 printf(".done %u\n", skeysize);
     
                 printf("Preparing device. All data will be destroyed...");
-                fill_zero(&device, device.size / BLOCKSIZE);
+                fill_zero(&device, device.size);
                 puts(".done\n");
         
                 printf("Setting buffers for data skey and key skey...");
