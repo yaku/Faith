@@ -457,27 +457,41 @@ void make_skey_main(device *device, int skeyfile, unsigned int keysize)
 void write_by_skey(device *device, int datafile, int skeyfile, unsigned int blocks) 
 {
 
-        unsigned long long int skey = 0;
-        unsigned char *buffer = calloc(1, SKEYRECORDSIZE);
+        unsigned long long int *skey = calloc(BUFFERED_BLOCKS, 8);
+        unsigned char *buffer = calloc(BUFFERED_BLOCKS, SKEYRECORDSIZE);
     
-        unsigned char *block = calloc(BLOCKSIZE, 1);
+        unsigned char *block = calloc(BLOCKSIZE, BUFFERED_BLOCKS);
         
         int i;
-    
-        for (i = 0; i < blocks; i++) {
-
-                if (read(skeyfile, buffer, SKEYRECORDSIZE) < 0)
+        
+        while (blocks > BUFFERED_BLOCKS) {
+                
+                if (read(skeyfile, buffer, SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
                         pdie("Read failed");
-                        
-                archive2skey(&skey, buffer, 1);
-
-                if (read(datafile, block, BLOCKSIZE) < 0)
+                                
+                archive2skey(skey, buffer, BUFFERED_BLOCKS);
+                
+                if (read(datafile, block, BLOCKSIZE * BUFFERED_BLOCKS) < 0)
                         pdie("Read failed");
-                        
-                write_data(device, block, BLOCKSIZE, skey);
-
+                                
+                for (i = 0; i < BUFFERED_BLOCKS; i++)
+                        write_data(device, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+                
+                blocks -= BUFFERED_BLOCKS;
         }
-    
+                
+        if (read(skeyfile, buffer, SKEYRECORDSIZE * blocks) < 0)
+                pdie("Read failed");
+                                
+        archive2skey(skey, buffer, blocks);
+        
+        if (read(datafile, block, BLOCKSIZE * blocks) < 0)
+                pdie("Read failed");
+                                
+        for (i = 0; i < blocks; i++)
+                write_data(device, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+        
+        free(skey);
         free(buffer);
         free(block);
 

@@ -1,4 +1,4 @@
-CFLAGS = -pg -D_FILE_OFFSET_BITS=64 -O2 -Wall
+CFLAGS = -pg -D_FILE_OFFSET_BITS=64 -O2
 
 CC = gcc
 LIBS =

@@ -23,6 +23,8 @@
 #define BUFFER_SIZE 512
 #define BBUFFER_SIZE 16384
 
+#define BUFFERED_BLOCKS 2048
+
 #define FILENAMEMAXLENGTH 512
 
 #define BLOCKSIZE 512
@@ -38,7 +40,6 @@
 #define DEVURANDOM 1
 #define SLRAND 2
 
-#define BOTH     0
 #define FORWARD  1
 #define BACKWARD 2
 #define BAD      3
