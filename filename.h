@@ -7,7 +7,7 @@
  *
  */
 
-void make_filename(int type, unsigned char* inputname, unsigned char *outputname) 
+void make_filename(int type, char* inputname, char *outputname) 
 {
 
         switch (type) {
@@ -32,7 +32,7 @@ void make_filename(int type, unsigned char* inputname, unsigned char *outputname
 }
 
 
-void make_out_time_filename(int type, unsigned char *outputname) 
+void make_out_time_filename(int type, char *outputname) 
 {
 
         time_t localunixtime = time(NULL);
@@ -47,7 +47,7 @@ void make_out_time_filename(int type, unsigned char *outputname)
 
 }
 
-void make_time_filename(unsigned char *outputname) 
+void make_time_filename(char *outputname) 
 {
 
         time_t localunixtime = time(NULL);

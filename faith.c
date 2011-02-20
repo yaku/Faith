@@ -117,7 +117,7 @@ int main(int argc, char **argv)
                 printf(".done\n");
         
                 printf("Re-diving data from device...");
-                immer_main(mode, argv[2], encfilename, keyfilename, (unsigned char *) argv[4], 0, 0);
+                immer_main(mode, argv[2], encfilename, keyfilename, argv[4], 0, 0);
                 printf(".done\n");
         
                 printf("Main gamma cipher decryption started...");
@@ -125,7 +125,7 @@ int main(int argc, char **argv)
                 printf(".done\n");
         
                 printf("Running cpio. Extractiong archive...");
-                snprintf(command, 1024, "cpio -i -I %s", datafilename);
+                snprintf(command, 1024, "cpio -id -I %s", datafilename);
                 if (system(command) != 0)
                         pdie("Cpio error");
                 printf(".done\n");

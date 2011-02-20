@@ -1,7 +1,7 @@
-CFLAGS = -pg
+CFLAGS = -pg -D_FILE_OFFSET_BITS=64 -O2 -Wall
 
 CC = gcc
-LIBS =  -lm 
+LIBS =
 INCLUDES =
 OBJS = faith.o
 SRCS = faith.c
@@ -10,7 +10,6 @@ HDRS =
 
 all: faith clean
 
-# The variable $@ has the value of the target. In this case $@ = psort
 faith: faith.o
 	${CC} ${CFLAGS} ${INCLUDES} -o $@ ${OBJS} ${LIBS}
 

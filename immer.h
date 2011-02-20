@@ -58,7 +58,7 @@ int is_free(device *device, unsigned long long int adress, unsigned int length)
 
 }
 
-void fill_random(device *device, unsigned int blocks, int type) 
+void fill_random(device *device, unsigned long long int bytes, int type) 
 { 
 
         lseek(device->descriptor, device->skip, SEEK_SET);
@@ -72,17 +72,25 @@ void fill_random(device *device, unsigned int blocks, int type)
                 if (urandom < 0)
                         pdie("Opening pseudorandom numbers generator failed");
     
-                unsigned char *buffer = (unsigned char *) malloc(BLOCKSIZE);
+                unsigned char *buffer = (unsigned char *) malloc(BBUFFER_SIZE);
     
-                while (blocks--) {
+                while (bytes > BBUFFER_SIZE) {
         
-                        if (read(urandom, buffer, BLOCKSIZE) < 0)
+                        if (read(urandom, buffer, BBUFFER_SIZE) < 0)
                                 pdie("Read failed");
             
-                        if (write(device->descriptor, buffer, BLOCKSIZE) < 0)
+                        if (write(device->descriptor, buffer, BBUFFER_SIZE) < 0)
                                 pdie("Write failed");
+                
+                        bytes -= BBUFFER_SIZE;
     
                 }
+                
+                if (read(urandom, buffer, bytes) < 0)
+                        pdie("Read failed");
+            
+                if (write(device->descriptor, buffer, bytes) < 0)
+                        pdie("Write failed");
         }
     
         if (type == SLRAND) {
@@ -90,15 +98,25 @@ void fill_random(device *device, unsigned int blocks, int type)
                 printf("\nFilling device by random data with standart library randomizer\n");
     
                 int i = 0;
-                unsigned char *randomblock = malloc(BLOCKSIZE);
-        
-                while (blocks--) {
-                        for(i = 0; i < BLOCKSIZE; i++)
-                                *(randomblock+i) = rand() % 256;
+                unsigned char *randomblock = malloc(BBUFFER_SIZE);
                 
-                        if (write(device->descriptor, randomblock, BLOCKSIZE) < 0)
+                while (bytes > BBUFFER_SIZE) {
+                
+                        for(i = 0; i < BBUFFER_SIZE; i++)
+                                *(randomblock+i) = rand() % 256;
+                                
+                        if (write(device->descriptor, randomblock, BBUFFER_SIZE) < 0)
                                 pdie("Write failed");
+                
+                        bytes -= BBUFFER_SIZE;
                 }
+                
+                for(i = 0; i < bytes; i++)
+                        *(randomblock+i) = rand() % 256; /*function from gamma_cipher*/
+        
+                if (write(device->descriptor, randomblock, bytes) < 0)
+                        pdie("Write failed");
+        
         
                 free(randomblock);
         }
@@ -427,7 +445,8 @@ void make_skey_main(device *device, int skeyfile, unsigned int keysize)
     
                 make_skey(device, &skey, 1, BLOCKSIZE);
                 skey2archive(&skey, buffer, 1);
-                write(skeyfile, buffer, SKEYRECORDSIZE);
+                if (write(skeyfile, buffer, SKEYRECORDSIZE) < 0)
+                        pdie("Write failed");
 
         }
     
@@ -442,16 +461,19 @@ void write_by_skey(device *device, int datafile, int skeyfile, unsigned int bloc
         unsigned char *buffer = calloc(1, SKEYRECORDSIZE);
     
         unsigned char *block = calloc(BLOCKSIZE, 1);
-    
-        int buffercount = 0;
-        int i = 0;
+        
+        int i;
     
         for (i = 0; i < blocks; i++) {
 
-                read(skeyfile, buffer, SKEYRECORDSIZE);
+                if (read(skeyfile, buffer, SKEYRECORDSIZE) < 0)
+                        pdie("Read failed");
+                        
                 archive2skey(&skey, buffer, 1);
 
-                read(datafile, block, BLOCKSIZE);
+                if (read(datafile, block, BLOCKSIZE) < 0)
+                        pdie("Read failed");
+                        
                 write_data(device, block, BLOCKSIZE, skey);
 
         }
@@ -477,7 +499,8 @@ void get_data(device *device, int datafile, unsigned long long int skeyaddress, 
                 archive2skey(&skey, buffer, 1);
 
                 read_data(device, block, BLOCKSIZE, skey);
-                write(datafile, block, BLOCKSIZE);    
+                if (write(datafile, block, BLOCKSIZE) < 0)
+                        pdie("Write failed");    
         }
     
         free(buffer);
@@ -485,7 +508,7 @@ void get_data(device *device, int datafile, unsigned long long int skeyaddress, 
     
 }
 
-unsigned long long int file_size(unsigned char *filename) 
+unsigned long long int file_size(char *filename) 
 {
 
         struct stat filestat;
@@ -542,7 +565,7 @@ unsigned long long int device_size(device *device)
         #endif
     
         #ifndef DEV
-        size = 1024 * 1024 * 64;
+        size = 1024ULL * 1024ULL * 1024ULL;
         #endif
     
         return size;
@@ -665,7 +688,7 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 printf(".done\n");    
         
                 printf("Filling device with random data...");
-                fill_random(&device, device.size / BLOCKSIZE, conf.randomizer);
+                fill_random(&device, device.size, conf.randomizer);
                 printf(".done\n");
         
                 lseek(dataskeyfile, 0, SEEK_SET);

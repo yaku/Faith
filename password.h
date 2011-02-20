@@ -136,7 +136,6 @@ void prepare_password(unsigned char *charpassword, struct pass *password)
         unsigned char *rawarr = calloc(15, 1);
         unsigned char *mixedarr = calloc(15, 1);
         
-        int i = 0;
         pass2arr(charpassword, mixedarr);
         
         replace_mixed2raw(mixedarr ,rawarr);
@@ -155,8 +154,6 @@ void make_password(unsigned char *outpassword, unsigned int skeysize, unsigned l
 
         unsigned char *rawarr = calloc(15, 1);
         unsigned char *mixedarr = calloc(15, 1);
-        
-        int i = 0;
     
         long2arr(keyskeyaddress, rawarr, 5);
         long2arr(dataskeyaddress, rawarr + 5, 5);
