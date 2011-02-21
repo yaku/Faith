@@ -35,23 +35,10 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
         int rfd;   /* Read file descriptor. */
         int kfd;   /* Key file descriptor. */
         int wfd;   /* Write file descriptor. */
-
-        unsigned char buffer[BUFFER_SIZE];   /* Read/Write buffer. */
-        unsigned char keybuffer[BUFFER_SIZE];
-        unsigned char bigbuffer[BBUFFER_SIZE];
-        unsigned char keybbuffer[BBUFFER_SIZE];
-    
-        unsigned char *bp;   /* Pointer into write buffer. */
-        unsigned char *bbp;
-        unsigned char *kbp; 
-        unsigned char *kbbp; 
-        unsigned char *userkey;
-        unsigned char *tmpbuf;
     
         int writtenChars;  /* Number of bytes written on last write. */
-        int bigbufferChars; /* Number of bytes remaining to be written. */
-        int keybufferChars;
-        int tmp;    
+        int readchars; /* Number of bytes remaining to be written. */
+        int keyreadchars;
     
         if (mode == ENCRYPT) {
     
@@ -84,119 +71,58 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
     
         srand(time(NULL)); /*Init randomizer*/
     
-        userkey = (unsigned char*) malloc(512);
-        tmpbuf = (unsigned char *) malloc(BUFFER_SIZE);
+        unsigned char *userkey = malloc(BBUFFER_SIZE);
     
-
+        unsigned char *bigbuffer = malloc(BBUFFER_SIZE);
+        unsigned char *ciphertext = malloc(BBUFFER_SIZE);
+        
+        int tmp;
     
         if (mode==ENCRYPT) {
-                kbbp=keybbuffer;
                 /*Main file cipher*/
+                
                 while (1) {
-                /* some number of bytes read. */
-                        if ((bigbufferChars = read (rfd, bigbuffer, BBUFFER_SIZE)) > 0) {
-                                bbp = bigbuffer;
-                                tmp = bigbufferChars;
-
-                                while (bigbufferChars > 0) {
-                                        bp = buffer;
-                                        memcpy(bp, bbp, BUFFER_SIZE);
-                    
-                                        if (bigbufferChars < BUFFER_SIZE) 
-                                                while (bigbufferChars < BUFFER_SIZE) 
-                                                        buffer[bigbufferChars++]=0;
-
-                    
-                                        bigbufferChars-=BUFFER_SIZE;
-                    
-                    
-                                        make_rand_userkey(userkey, 512);
-                                        memcpy(kbbp,userkey, 512);
-                                        kbbp += 512;
-                                        memcpy(tmpbuf, bp, 512);
-                    
-                                        gamma_cipher(bp, tmpbuf, userkey, 512);
-                    
-                                        memcpy(bbp, bp, BUFFER_SIZE);
-                    
-                                        bbp += BUFFER_SIZE;
-                                }
-                                bigbufferChars = tmp;
-                                bbp = bigbuffer;
-                                kbbp = keybbuffer;
-                                write(kfd, kbbp, bigbufferChars);
-                                while (bigbufferChars > 0) {
-                                        if ((writtenChars = write(wfd, bbp, bigbufferChars) ) < 0)
-                                                pdie("Write failed");
-        
-                                        bigbufferChars -= writtenChars; 
-                                        bbp += writtenChars;
-                                }
-    
-                        } else if (bigbufferChars == 0)   /* EOF reached. */
+                
+                        if ((readchars = read (rfd, bigbuffer, BBUFFER_SIZE)) > 0) {
+                
+                                make_rand_userkey(userkey, readchars);
+                        
+                                gamma_cipher(ciphertext, bigbuffer, userkey, readchars);
+                        
+                                if ((writtenChars = write(wfd, ciphertext, readchars) ) < 0)
+                                        pdie("Write failed");
+                                
+                                if ((writtenChars = write(kfd, userkey, readchars) ) < 0)
+                                        pdie("Write failed");
+                                
+                        } else if (readchars == 0) 
                                 break;
                         else
                                 pdie("Read failed");
-            
-        }
-        /*End of Main file cipher*/
+                
+                }
         } else {
     
                 /*Main file decipher*/
                 while (1) {
                 /* some number of bytes read. */
-                        if ((bigbufferChars = read(rfd, bigbuffer, BBUFFER_SIZE)) > 0 && (keybufferChars = read(kfd, keybbuffer, BBUFFER_SIZE)) >0 ) {
-            
-                                if (bigbufferChars != keybufferChars) 
-                                        pdie("Invalid keyfile");
-                                        
-                                bbp = bigbuffer;
-                                kbbp = keybbuffer;
-                                tmp = bigbufferChars;
                 
-                                while (bigbufferChars > 0) {
-                                        bp = buffer;
-                                        kbp = keybuffer;
-                                        memcpy(bp, bbp, BUFFER_SIZE);
-                                        memcpy(kbp, kbbp, BUFFER_SIZE);
-                    
-                                        if (bigbufferChars < BUFFER_SIZE) 
-                                                while (bigbufferChars < BUFFER_SIZE) {
-                                                        keybuffer[bigbufferChars] = 0;
-                                                        buffer[bigbufferChars++] = 0;
-                            
-                                                }
-                            
-                                        bigbufferChars -= BUFFER_SIZE;
-                    
-                    
-                                        gamma_cipher(tmpbuf, bp, kbp, 512);
-                    
-                                        memcpy(bbp, tmpbuf, BUFFER_SIZE);
-                    
-                                        bbp += BUFFER_SIZE;
-                                        kbbp += BUFFER_SIZE;
-                                }
+                        if ((readchars = read(rfd, bigbuffer, BBUFFER_SIZE)) > 0 && (keyreadchars = read(kfd, userkey, BBUFFER_SIZE)) > 0) {
+                        
+                                if (readchars != keyreadchars) 
+                                        pdie("Invalid keyfile");
+                        
+                                gamma_cipher(ciphertext, bigbuffer, userkey, readchars);
+                        
+                                if ((writtenChars = write(wfd, ciphertext, readchars) ) < 0)
+                                        pdie("Write failed");
                                 
-                                bigbufferChars=tmp;
-                                bbp=bigbuffer;
-                                kbp=keybuffer;
-                                write(kfd, kbp, bigbufferChars);
-                                while (bigbufferChars > 0) {
-                                        if ((writtenChars = write(wfd, bbp, bigbufferChars) ) < 0)
-                                                pdie("Write failed");
-        
-                                        bigbufferChars -= writtenChars; 
-                                        bbp += writtenChars;
-                                }
-    
-                        } else if (bigbufferChars == 0)   /* EOF reached. */
+                                
+                        } else if (readchars == 0) 
                                 break;
                         else
                                 pdie("Read failed");
-            
                 }
-        /*End of Main file decipher*/
     
         }
 

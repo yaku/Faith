@@ -143,12 +143,19 @@ void fill_zero(device *device, unsigned long long int bytes)
 
 }
 
-void write_data(device *device, void *block, unsigned int length, unsigned long long int address) 
+void write_data(device *device, unsigned char *block, int length, unsigned long long int address) 
 {
 
+        int writtenchars;
+        
         lseek(device->descriptor, address + device->skip, SEEK_SET);
+        
+        
         if (write(device->descriptor, block, length) < 0)
                 pdie("Write failed");
+        
+        
+        
 
 }
 
