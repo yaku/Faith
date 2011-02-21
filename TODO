@@ -3,7 +3,10 @@ filetables
 GUI
 read and write mbr and boot partition
 random first file of archive
+memory leaks test
 
 long:
 Double buffering for make_skey, write_by_skey, get_data functions
-refactor gamma cipher. Divide make_key and cipher
+fix potential bug if writtenchars != readchars in gamma cipher
+multithreading randomizer (multicore mashine)
+show percentage in long functions

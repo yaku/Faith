@@ -36,7 +36,7 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
         int kfd;   /* Key file descriptor. */
         int wfd;   /* Write file descriptor. */
     
-        int writtenChars;  /* Number of bytes written on last write. */
+        int writtenchars;  /* Number of bytes written on last write. */
         int readchars; /* Number of bytes remaining to be written. */
         int keyreadchars;
     
@@ -71,10 +71,10 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
     
         srand(time(NULL)); /*Init randomizer*/
     
-        unsigned char *userkey = malloc(BBUFFER_SIZE);
+        unsigned char *userkey = malloc(BUFFER_SIZE);
     
-        unsigned char *bigbuffer = malloc(BBUFFER_SIZE);
-        unsigned char *ciphertext = malloc(BBUFFER_SIZE);
+        unsigned char *bigbuffer = malloc(BUFFER_SIZE);
+        unsigned char *ciphertext = malloc(BUFFER_SIZE);
         
         int tmp;
     
@@ -83,17 +83,23 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
                 
                 while (1) {
                 
-                        if ((readchars = read (rfd, bigbuffer, BBUFFER_SIZE)) > 0) {
+                        if ((readchars = read (rfd, bigbuffer, BUFFER_SIZE)) > 0) {
                 
                                 make_rand_userkey(userkey, readchars);
                         
                                 gamma_cipher(ciphertext, bigbuffer, userkey, readchars);
                         
-                                if ((writtenChars = write(wfd, ciphertext, readchars) ) < 0)
+                                if ((writtenchars = write(wfd, ciphertext, readchars) ) < 0)
                                         pdie("Write failed");
                                 
-                                if ((writtenChars = write(kfd, userkey, readchars) ) < 0)
+                                if (writtenchars != readchars) /*need fix*/
+                                        printf("IO warning\n");
+                                
+                                if ((writtenchars = write(kfd, userkey, readchars) ) < 0)
                                         pdie("Write failed");
+                                        
+                                if (writtenchars != readchars)
+                                        printf("IO warning\n");
                                 
                         } else if (readchars == 0) 
                                 break;
@@ -107,15 +113,18 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
                 while (1) {
                 /* some number of bytes read. */
                 
-                        if ((readchars = read(rfd, bigbuffer, BBUFFER_SIZE)) > 0 && (keyreadchars = read(kfd, userkey, BBUFFER_SIZE)) > 0) {
+                        if ((readchars = read(rfd, bigbuffer, BUFFER_SIZE)) > 0 && (keyreadchars = read(kfd, userkey, BUFFER_SIZE)) > 0) {
                         
                                 if (readchars != keyreadchars) 
                                         pdie("Invalid keyfile");
                         
                                 gamma_cipher(ciphertext, bigbuffer, userkey, readchars);
                         
-                                if ((writtenChars = write(wfd, ciphertext, readchars) ) < 0)
+                                if ((writtenchars = write(wfd, ciphertext, readchars) ) < 0)
                                         pdie("Write failed");
+                                        
+                                if (writtenchars != readchars)
+                                        printf("IO warning\n");
                                 
                                 
                         } else if (readchars == 0) 
@@ -125,6 +134,10 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
                 }
     
         }
+        
+        free(userkey);
+        free(bigbuffer);
+        free(ciphertext);
 
         /*Close files*/
         close(rfd);
