@@ -62,10 +62,12 @@ void fill_random(device *device, unsigned long long int bytes, int type)
 { 
 
         lseek(device->descriptor, device->skip, SEEK_SET);
+        
+        bytes -= device->skip;
     
         if (type == DEVURANDOM) {
     
-                printf("\nFilling device by random data with system urandom randomizer\n");
+                printf("\nFilling by random data with system urandom randomizer\n");
     
                 int urandom = open("/dev/urandom",O_RDONLY);
     
@@ -95,7 +97,7 @@ void fill_random(device *device, unsigned long long int bytes, int type)
     
         if (type == SLRAND) {
     
-                printf("\nFilling device by random data with standart library randomizer\n");
+                printf("\nFilling by random data with standart library randomizer\n");
     
                 int i = 0;
                 unsigned char *randomblock = malloc(BUFFER_SIZE);
@@ -128,6 +130,8 @@ void fill_zero(device *device, unsigned long long int bytes)
 
         lseek(device->descriptor, device->skip, SEEK_SET);
         unsigned char *zeros = (unsigned char *) calloc(1, BUFFER_SIZE);
+        
+        bytes -= device->skip;
     
         while (bytes > BUFFER_SIZE) {
                 if (write(device->descriptor, zeros, BUFFER_SIZE) < 0)
