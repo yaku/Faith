@@ -69,6 +69,15 @@ int main(int argc, char **argv)
         char *keyskeyfilename   = malloc(FILENAMEMAXLENGTH); 
     
         char *command = malloc(1024);
+        
+        printf("Initialising random number numbers generator...");
+        srand(time(NULL));
+        printf(".done\n");
+        
+        printf("Reading configuration file...");
+        config conf;
+        read_config(&conf, "config.cfg");
+        printf(".done\n");
     
     
         if (mode == ENCRYPT) {
@@ -90,11 +99,11 @@ int main(int argc, char **argv)
                 printf(".done\n");
         
                 printf("Main gamma cipher encryption started...");
-                gammacipher_main(mode, datafilename, keyfilename, encfilename);
+                gammacipher_main(mode, datafilename, keyfilename, encfilename, conf);
                 printf(".done\n");
         
                 printf("Dive data to device started...");
-                immer_main(mode, argv[2], encfilename, keyfilename, 0, dataskeyfilename, keyskeyfilename);
+                immer_main(mode, argv[2], encfilename, keyfilename, 0, dataskeyfilename, keyskeyfilename, conf);
                 printf(".done\n");
         
                 printf("Cleaning work directory. Removing files...");
@@ -117,11 +126,11 @@ int main(int argc, char **argv)
                 printf(".done\n");
         
                 printf("Re-diving data from device...");
-                immer_main(mode, argv[2], encfilename, keyfilename, argv[4], 0, 0);
+                immer_main(mode, argv[2], encfilename, keyfilename, argv[4], 0, 0, conf);
                 printf(".done\n");
         
                 printf("Main gamma cipher decryption started...");
-                gammacipher_main(mode, encfilename, keyfilename, datafilename);
+                gammacipher_main(mode, encfilename, keyfilename, datafilename, conf);
                 printf(".done\n");
         
                 printf("Running cpio. Extractiong archive...");

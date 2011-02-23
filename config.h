@@ -26,10 +26,8 @@ void read_config(config *confstruct, char *configfilename)
     
         confstruct->randomizer = 0;
     
-        while (feof(configfile) == 0) {
-        
-                fgets(configstring, CONFIGSTRINGMAXLEN, configfile);
-    
+        while (fgets(configstring, CONFIGSTRINGMAXLEN, configfile)) {
+
                 if (strcmp(configstring, "randomizer=DEVURANDOM\n") == 0)
                         confstruct->randomizer = DEVURANDOM;
                         
@@ -44,5 +42,7 @@ void read_config(config *confstruct, char *configfilename)
                 confstruct->randomizer = DEVURANDOM;
     
         }
+        
+        free(configstring);
 
 }

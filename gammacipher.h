@@ -14,12 +14,6 @@ void die(const char *mesg)
         exit(1);
 }
 
-void make_rand_userkey(unsigned char *userkey, int keylen) 
-{
-        while (keylen--)
-                *userkey++ = rand() % 256;
-}
-
 void gamma_cipher(unsigned char *out, unsigned char *in, unsigned char *key, int len) 
 {
 
@@ -29,7 +23,7 @@ void gamma_cipher(unsigned char *out, unsigned char *in, unsigned char *key, int
 
 }
 
-int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *outfilename) 
+int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *outfilename, config conf) 
 {
 
         int rfd;   /* Read file descriptor. */
@@ -54,8 +48,6 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
                 if ((kfd = open(keyfilename, O_RDONLY, 0)) < 0) 
                         pdie("Open failed");       
     
-        srand(time(NULL)); /*Init randomizer*/
-    
         unsigned char *userkey = malloc(BUFFER_SIZE);
         unsigned char *bigbuffer = malloc(BUFFER_SIZE);
         unsigned char *ciphertext = malloc(BUFFER_SIZE);
@@ -63,7 +55,7 @@ int gammacipher_main (int mode, char *datafilename, char *keyfilename, char *out
         if (mode==ENCRYPT) {
                 
                 device keyfile = {kfd, file_size(datafilename), 0}; 
-                fill_random(&keyfile, keyfile.size, DEVURANDOM);
+                fill_random(&keyfile, keyfile.size, conf.randomizer);
                 
                 lseek(kfd, 0, SEEK_SET);
                 

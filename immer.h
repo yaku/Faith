@@ -50,12 +50,9 @@ int is_free(device *device, unsigned long long int adress, unsigned int length)
         } else 
                 pdie("Read failed");
         
-    
-        return flag;
-    
         free(buffer);
     
-
+        return flag;
 }
 
 void fill_random(device *device, unsigned long long int bytes, int type) 
@@ -64,7 +61,9 @@ void fill_random(device *device, unsigned long long int bytes, int type)
         lseek(device->descriptor, device->skip, SEEK_SET);
         
         bytes -= device->skip;
-    
+        
+        unsigned char *randombuffer = malloc(BUFFER_SIZE);
+        
         if (type == DEVURANDOM) {
     
                 printf("\nFilling by random data with system urandom randomizer\n");
@@ -74,24 +73,22 @@ void fill_random(device *device, unsigned long long int bytes, int type)
                 if (urandom < 0)
                         pdie("Opening pseudorandom numbers generator failed");
     
-                unsigned char *buffer = (unsigned char *) malloc(BUFFER_SIZE);
-    
                 while (bytes > BUFFER_SIZE) {
         
-                        if (read(urandom, buffer, BUFFER_SIZE) < 0)
+                        if (read(urandom, randombuffer, BUFFER_SIZE) < 0)
                                 pdie("Read failed");
             
-                        if (write(device->descriptor, buffer, BUFFER_SIZE) < 0)
+                        if (write(device->descriptor, randombuffer, BUFFER_SIZE) < 0)
                                 pdie("Write failed");
                 
                         bytes -= BUFFER_SIZE;
     
                 }
                 
-                if (read(urandom, buffer, bytes) < 0)
+                if (read(urandom, randombuffer, bytes) < 0)
                         pdie("Read failed");
             
-                if (write(device->descriptor, buffer, bytes) < 0)
+                if (write(device->descriptor, randombuffer, bytes) < 0)
                         pdie("Write failed");
         }
     
@@ -100,28 +97,27 @@ void fill_random(device *device, unsigned long long int bytes, int type)
                 printf("\nFilling by random data with standart library randomizer\n");
     
                 int i = 0;
-                unsigned char *randomblock = malloc(BUFFER_SIZE);
                 
                 while (bytes > BUFFER_SIZE) {
                 
                         for(i = 0; i < BUFFER_SIZE; i++)
-                                *(randomblock+i) = rand() % 256;
+                                *(randombuffer+i) = rand() % 256;
                                 
-                        if (write(device->descriptor, randomblock, BUFFER_SIZE) < 0)
+                        if (write(device->descriptor, randombuffer, BUFFER_SIZE) < 0)
                                 pdie("Write failed");
                 
                         bytes -= BUFFER_SIZE;
                 }
                 
                 for(i = 0; i < bytes; i++)
-                        *(randomblock+i) = rand() % 256; /*function from gamma_cipher*/
+                        *(randombuffer+i) = rand() % 256;
         
-                if (write(device->descriptor, randomblock, bytes) < 0)
+                if (write(device->descriptor, randombuffer, bytes) < 0)
                         pdie("Write failed");
         
-        
-                free(randomblock);
         }
+        
+        free(randombuffer);
 
 }
 
@@ -640,7 +636,7 @@ unsigned long long int set_skip(device *device) /**/
 void make_mbr() {}
 void write_boot_partition() {}
 
-void immer_main(int mode, char *devicename, char *datafilename, char *keyfilename, char *charpassword, char *dataskeyfilename, char *keyskeyfilename) 
+void immer_main(int mode, char *devicename, char *datafilename, char *keyfilename, char *charpassword, char *dataskeyfilename, char *keyskeyfilename, config conf) 
 {
 
         device device;
@@ -665,8 +661,7 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 pdie("Device open failed. Maybe wrong device selected?");
         
         printf(".done\n");
-    
-        /*Open files*/
+
         printf("\nOpening files...");
     
         if (mode == ENCRYPT) {
@@ -693,7 +688,6 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         }
     
         printf(".done\n");
-        /*End of Open files*/
     
         printf("Getting device size...");
         device.size = device_size(&device); 
@@ -703,20 +697,10 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
         device.skip = set_skip(&device);
         printf(".done %u\n", device.skip);  
     
-    
-        printf("Initialising random number numbers generator...");
-        srand(time(NULL));
-        printf(".done\n");
-    
         unsigned long long int dataskeyaddress = 0;
         unsigned long long int keyskeyaddress = 0;  
     
         device.size -= device.skip;
-    
-        printf("Reading configuration file...");
-        config conf;
-        read_config(&conf, "config.cfg");
-        printf(".done\n");
     
         if (mode == ENCRYPT) {
     
