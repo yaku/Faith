@@ -1,4 +1,4 @@
-CFLAGS = -mtune=i686 -D_FILE_OFFSET_BITS=64 -O2
+CFLAGS = -mtune=i686 -march=i686 -D_FILE_OFFSET_BITS=64 -O2
 
 CC = gcc
 LIBS =
