@@ -303,23 +303,16 @@ unsigned long long int get_skey_in_space(device *device, space *space, int block
         unsigned long long int result = 0;
                 
         int max = space->end - space->begin;
-               
+
         while (!flag) {
                 
                 subrnd = rand() % max;
                     
-                if (is_free(device, space->begin + subrnd, blocksize)) {
+                if ((space->end - (space->begin + subrnd)) > blocksize) {
             
                         result = space->begin + subrnd;
                         set_flags(device, space->begin + subrnd, blocksize);
                     
-                        flag = 1;
-            
-                } else if (is_free(device, space->begin + subrnd - blocksize, blocksize)) {
-            
-                        result = space->begin + subrnd - blocksize;
-                        set_flags(device, space->begin + subrnd - blocksize, blocksize);
-
                         flag = 1;
             
                 } else {
