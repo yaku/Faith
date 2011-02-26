@@ -626,9 +626,6 @@ unsigned long long int set_skip(device *device) /**/
 
 }
 
-void make_mbr() {}
-void write_boot_partition() {}
-
 void immer_main(int mode, char *devicename, char *datafilename, char *keyfilename, char *charpassword, char *dataskeyfilename, char *keyskeyfilename, config conf) 
 {
 
@@ -768,9 +765,6 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 get_data(&device, outkeyfile, password.keyskeyaddress, skeysize);   
                 printf(".done\n");
         }
-   
-    
-        /*Close files*/
 
         close(device.descriptor);
         if (mode == ENCRYPT) {
@@ -785,7 +779,6 @@ void immer_main(int mode, char *devicename, char *datafilename, char *keyfilenam
                 close(outdatafile);
                 close(outkeyfile);
         }
-        /*End of close files*/
 
 }
 
