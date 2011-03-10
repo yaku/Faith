@@ -22,16 +22,6 @@ typedef struct space {
 
 } space;
 
-typedef struct names {
-
-        char *data;
-        char *key;
-        char *dataskey;
-        char *keyskey;
-        char *enc;
-
-} names;
-
 int is_free(device *device, unsigned long long int adress, unsigned int length)
 {
 
@@ -656,7 +646,12 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
         unsigned long long int datalen = 0;
 
         printf("\nOpening device...");
-        device.descriptor = open(devicename, O_RDWR);
+
+        if (conf.isfile)
+                device.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        else
+                device.descriptor = open(devicename, O_RDWR);
+
         if (device.descriptor < 0)
                 pdie("Device open failed. Maybe wrong device selected?");
 
@@ -690,7 +685,11 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
         printf(".done\n");
 
         printf("Getting device size...");
-        device.size = device_size(&device);
+        if (conf.isfile)
+                device.size = conf.filesize;
+        else
+                device.size = device_size(&device);
+
         printf(".done %lld\n", device.size);
 
         printf("Setting skip for mbr and boot partition...");
@@ -730,7 +729,7 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
                 printf(".done\n");
 
                 printf("Filling device with random data...");
-                //fill_random(&device, device.size, conf.randomizer);
+                fill_random(&device, device.size, conf.randomizer);
                 printf(".done\n");
 
                 lseek(dataskeyfile, 0, SEEK_SET);

@@ -22,31 +22,16 @@
 #include "includes.h"
 
 #include "die.h"
+#include "filename.h"
 #include "config.h"
 #include "password.h"
 #include "immer.h"
 #include "gammacipher.h"
-#include "filename.h"
 
 void print_usage()
 {
         printf("Usage: faith -[e,d] device [-l filelist] [-p pass] [-f size]\n");
         exit(0);
-}
-
-void make_names(int mode, names filename) {
-
-        make_time_filename(filename.data);
-        make_filename(KEYFILE, filename.data, filename.key);
-        make_filename(ENCFILE, filename.data, filename.enc);
-        make_filename(DATASKEYFILE, filename.data, filename.dataskey);
-        make_filename(KEYSKEYFILE, filename.data, filename.keyskey);
-
-        if (mode == DECRYPT) {
-                make_out_time_filename(DATA, filename.data);
-                make_out_time_filename(KEY, filename.key);
-        }
-
 }
 
 void remove_files(int mode, names filename) {
@@ -59,6 +44,47 @@ void remove_files(int mode, names filename) {
                 unlink(filename.dataskey);
                 unlink(filename.keyskey);
         }
+
+}
+
+unsigned long long int arg_file_size(char *argument) {
+
+        unsigned long long int result = 0;
+
+        while (*argument) {
+                switch (*argument) {
+                case '0':
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                        result *= 10;
+                        result += (*argument - '0');
+
+                        break;
+                case 'k':
+                case 'K':
+                        result *= 1024;
+                        break;
+                case 'm':
+                case 'M':
+                        result *= (1024 * 1024);
+                        break;
+                case 'g':
+                case 'G':
+                        result *= (1024 * 1024 * 1024);
+                        break;
+                }
+
+                argument++;
+        }
+
+        return result;
 
 }
 
@@ -80,6 +106,10 @@ int main(int argc, char **argv)
         else
                 print_usage();
 
+        printf("Reading configuration file.\n");
+        config conf;
+        read_config(&conf, "config.cfg");
+
         int i;
         char *list, *pass, *name;
 
@@ -100,6 +130,20 @@ int main(int argc, char **argv)
                                         print_usage();
                                 else
                                         pass = argv[i + 1];
+
+                                break;
+
+                        case 'f':
+                                if (mode == DECRYPT)
+                                        print_usage();
+
+                                else {
+                                        conf.isfile = 1;
+                                        conf.filesize = arg_file_size(argv[i + 1]);
+
+                                        if (conf.filesize == 0)
+                                                print_usage();
+                                }
 
                                 break;
                         }
@@ -128,10 +172,6 @@ int main(int argc, char **argv)
         printf("Initialising random number numbers generator...");
         srand(time(NULL));
         printf(".done\n");
-
-        printf("Reading configuration file.\n");
-        config conf;
-        read_config(&conf, "config.cfg");
 
         printf("Making names.\n");
         make_names(mode, filename);
