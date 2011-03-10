@@ -604,16 +604,10 @@ unsigned long long int device_size(device *device)
 
         unsigned long long size = 0;
 
-        #ifdef DEV
         if(ioctl(device->descriptor, BLKGETSIZE64, &size) != -1)
                 ;
         else
                 pdie("Getting device size failed");
-        #endif
-
-        #ifndef DEV
-        size = 1024ULL * 1024ULL * 1024ULL;
-        #endif
 
         return size;
 

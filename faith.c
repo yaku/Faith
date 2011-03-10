@@ -69,14 +69,20 @@ unsigned long long int arg_file_size(char *argument) {
                         break;
                 case 'k':
                 case 'K':
+                        if (result == 0)
+                                result = 1;
                         result *= 1024;
                         break;
                 case 'm':
                 case 'M':
+                        if (result == 0)
+                                result = 1;
                         result *= (1024 * 1024);
                         break;
                 case 'g':
                 case 'G':
+                        if (result == 0)
+                                result = 1;
                         result *= (1024 * 1024 * 1024);
                         break;
                 }
