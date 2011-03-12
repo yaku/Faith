@@ -7,7 +7,17 @@
  *
  */
 
-void make_filename(int type, unsigned char* inputname, unsigned char *outputname) 
+typedef struct names {
+
+        char *data;
+        char *key;
+        char *dataskey;
+        char *keyskey;
+        char *enc;
+
+} names;
+
+void make_filename(int type, char* inputname, char *outputname)
 {
 
         switch (type) {
@@ -19,41 +29,57 @@ void make_filename(int type, unsigned char* inputname, unsigned char *outputname
                 break;
         case ENCFILE:
                 snprintf(outputname, FILENAMEMAXLENGTH, "%s.enc", inputname);
-                break;  
+                break;
         case DATASKEYFILE:
                 snprintf(outputname, FILENAMEMAXLENGTH, "%s.dataskey", inputname);
                 break;
         case KEYSKEYFILE:
                 snprintf(outputname, FILENAMEMAXLENGTH, "%s.keyskey", inputname);
-                break;      
+                break;
         default:
                 pdie("Internal error");
         }
 }
 
 
-void make_out_time_filename(int type, unsigned char *outputname) 
+void make_out_time_filename(int type, char *outputname)
 {
 
         time_t localunixtime = time(NULL);
-    
+
         struct tm *timestruct = localtime(&localunixtime);
-        
+
         if (type == DATA)
             strftime(outputname, FILENAMEMAXLENGTH, "Data.out_%a.%d.%m.%Y_%H.%M.%S", timestruct);
-            
+
         else if (type == KEY)
             strftime(outputname, FILENAMEMAXLENGTH, "Key.out_%a.%d.%m.%Y_%H.%M.%S", timestruct);
 
 }
 
-void make_time_filename(unsigned char *outputname) 
+void make_time_filename(char *outputname)
 {
 
         time_t localunixtime = time(NULL);
-    
+
         struct tm *timestruct = localtime(&localunixtime);
 
         strftime(outputname, FILENAMEMAXLENGTH, "Data_%a_%d.%m.%Y_%H.%M.%S.cpio", timestruct);
-        
+
 }
+
+void make_names(int mode, names filename) {
+
+        make_time_filename(filename.data);
+        make_filename(KEYFILE, filename.data, filename.key);
+        make_filename(ENCFILE, filename.data, filename.enc);
+        make_filename(DATASKEYFILE, filename.data, filename.dataskey);
+        make_filename(KEYSKEYFILE, filename.data, filename.keyskey);
+
+        if (mode == DECRYPT) {
+                make_out_time_filename(DATA, filename.data);
+                make_out_time_filename(KEY, filename.key);
+        }
+
+}
+

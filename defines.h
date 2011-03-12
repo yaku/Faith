@@ -20,25 +20,25 @@
 #define DATASKEYFILE 3
 #define KEYSKEYFILE 4
 
-#define BUFFER_SIZE 512
-#define BBUFFER_SIZE 16384
+#define BLOCKSIZE 512
+#define BUFFER_SIZE 16777216
+
+#define BUFFERED_BLOCKS (BUFFER_SIZE / BLOCKSIZE)
 
 #define FILENAMEMAXLENGTH 512
-
-#define BLOCKSIZE 512
 
 #define SKEYRECORDSIZE 5
 
 #define MAXLEVEL 2000
-
-#define DEV 1
 
 #define CONFIGSTRINGMAXLEN 1024
 
 #define DEVURANDOM 1
 #define SLRAND 2
 
-#define BOTH     0
+#define STEP 4096
+
 #define FORWARD  1
 #define BACKWARD 2
 #define BAD      3
+
