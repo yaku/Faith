@@ -30,7 +30,16 @@
 
 void print_usage()
 {
-        printf("Usage: faith -[e,d] device [-l filelist] [-p pass] [-f size]\n");
+        printf("\
+Usage: faith -[e,d] [-l filelist] [-p pass] [-f size] device\n\
+Examples:\n\
+Encrypt files in filelist to device named /dev/sdb1\n\
+faith -e -l filelist /dev/sdb1\n\
+Encrypt files in filelist to file named testfile with size 100 megabytes\n\
+faith -e -l filelist -f 100M testfile\n\n\
+Decrypt device or file with password pass\n\
+faith -d -p pass /dev/sdb1\n\
+faith -d -p pass testfile\n");
         exit(0);
 }
 
@@ -94,6 +103,13 @@ unsigned long long int arg_file_size(char *argument) {
 
 }
 
+void init_randomizer()
+{
+
+        srand(time(NULL));
+
+}
+
 int main(int argc, char **argv)
 {
 
@@ -118,6 +134,7 @@ int main(int argc, char **argv)
 
         int i;
         char *list, *pass, *name;
+        int needargs = 1;
 
         for (i = 2; i < argc; i += 2) {
 
@@ -126,16 +143,22 @@ int main(int argc, char **argv)
                         case 'l':
                                 if (mode == DECRYPT)
                                         print_usage();
-                                else
+
+                                else {
                                         list = argv[i + 1];
+                                        needargs++;
+                                }
 
                                 break;
 
                         case 'p':
                                 if (mode == ENCRYPT)
                                         print_usage();
-                                else
+
+                                else {
                                         pass = argv[i + 1];
+                                        needargs++;
+                                }
 
                                 break;
 
@@ -156,12 +179,13 @@ int main(int argc, char **argv)
                 else {
                         name = argv[i];
                         i -= 1;
+                        needargs++;
                 }
 
 
         }
 
-        if (argc < 5)
+        if (needargs != 3)
                 print_usage();
         /*End of check comand line arguments*/
 
@@ -175,9 +199,8 @@ int main(int argc, char **argv)
 
         char *command = malloc(1024);
 
-        printf("Initialising random number numbers generator...");
+        printf("Initialising random number numbers generator.\n");
         srand(time(NULL));
-        printf(".done\n");
 
         printf("Making names.\n");
         make_names(mode, filename);
