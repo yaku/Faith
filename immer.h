@@ -655,7 +655,7 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
 
         if (mode == ENCRYPT) {
 
-                datafile = open(filename.data, O_RDONLY);
+                datafile = open(filename.enc, O_RDONLY);
                 keyfile  = open(filename.key, O_RDONLY);
 
                 dataskeyfile = open(filename.dataskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);

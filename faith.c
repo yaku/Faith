@@ -238,7 +238,7 @@ int main(int argc, char **argv)
                 printf(".done\n");
 
                 printf("Running cpio. Extractiong archive...");
-                snprintf(command, 1024, "cpio -id -I %s", filename.data);
+                snprintf(command, 1024, "cpio -id -I %s", filename.enc);
                 if (system(command) != 0)
                         pdie("Cpio error");
                 printf(".done\n");
