@@ -146,22 +146,43 @@ void fill_zero(device *device, unsigned long long int bytes)
 void write_data(device *device, unsigned char *block, int length, unsigned long long int address)
 {
 
+        extern int errno;
         int writtenchars;
 
         lseek(device->descriptor, address + device->skip, SEEK_SET);
 
+        while (length != 0) {
+                if ((writtenchars = write(device->descriptor, block, length)) < 0)
+                        if (errno = EINTR)
+                                continue;
+                        else
+                                pdie("Write failed");
 
-        if (write(device->descriptor, block, length) < 0) /*add writtenchars check*/
-                pdie("Write failed");
-
+                length -= writtenchars;
+                block += writtenchars;
+        }
 }
 
 void read_data(device *device, unsigned char *block, unsigned int length, unsigned long long int address)
 {
 
+        extern int errno;
+
         lseek(device->descriptor, address + device->skip, SEEK_SET);
-        if (read(device->descriptor, block, length) < 0)
-                pdie("Read failed");
+
+        int ret = 0;
+
+        while (length != 0) {
+                if ((ret = read(device->descriptor, block, length)) < 0)
+                        if (errno == EINTR)
+                                continue;
+                        else
+                                pdie("Read failed");
+
+                length -= ret;
+                block += ret;
+
+        }
 
 }
 

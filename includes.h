@@ -19,4 +19,5 @@
 #include <sys/types.h>
 #include <linux/fs.h>
 #include <unistd.h>
+#include <errno.h>
 
