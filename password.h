@@ -7,6 +7,7 @@
  *
  */
 
+
 struct pass {
     
         unsigned int skeysize;
