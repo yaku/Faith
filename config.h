@@ -12,7 +12,7 @@ typedef struct config {
 
         char randomizer;
         char isfile;
-        unsigned long long int filesize; /**/
+        u_int64_t filesize; /**/
 
 } config;
 

@@ -10,19 +10,19 @@
 typedef struct device {
 
         int descriptor;
-        unsigned long long int size;
-        unsigned int skip;
+        u_int64_t size;
+        uint skip;
 
 } device;
 
 typedef struct space {
 
-        unsigned long long int begin;
-        unsigned long long int end;
+        u_int64_t begin;
+        u_int64_t end;
 
 } space;
 
-int is_free(device *device, unsigned long long int adress, unsigned int length)
+int is_free(device *device, u_int64_t adress, uint length)
 {
 
         unsigned char *buffer = (unsigned char *) malloc(length);
@@ -55,7 +55,7 @@ int is_free(device *device, unsigned long long int adress, unsigned int length)
         return flag;
 }
 
-void fill_random(device *device, unsigned long long int bytes, int type)
+void fill_random(device *device, u_int64_t bytes, int type)
 {
 
         lseek(device->descriptor, device->skip, SEEK_SET);
@@ -121,7 +121,7 @@ void fill_random(device *device, unsigned long long int bytes, int type)
 
 }
 
-void fill_zero(device *device, unsigned long long int bytes)
+void fill_zero(device *device, u_int64_t bytes)
 {
 
         lseek(device->descriptor, device->skip, SEEK_SET);
@@ -143,7 +143,7 @@ void fill_zero(device *device, unsigned long long int bytes)
 
 }
 
-void write_data(device *device, unsigned char *block, int length, unsigned long long int address)
+void write_data(device *device, unsigned char *block, int length, u_int64_t address)
 {
 
         extern int errno;
@@ -163,7 +163,7 @@ void write_data(device *device, unsigned char *block, int length, unsigned long 
         }
 }
 
-void read_data(device *device, unsigned char *block, unsigned int length, unsigned long long int address)
+void read_data(device *device, unsigned char *block, uint length, u_int64_t address)
 {
 
         extern int errno;
@@ -186,7 +186,7 @@ void read_data(device *device, unsigned char *block, unsigned int length, unsign
 
 }
 
-void set_flags(device *device, unsigned long long int address, unsigned int length)
+void set_flags(device *device, u_int64_t address, uint length)
 {
 
         unsigned char *flags = (unsigned char *) malloc(length);
@@ -200,7 +200,7 @@ void set_flags(device *device, unsigned long long int address, unsigned int leng
 
 }
 
-void skey2archive(unsigned long long int *skey, unsigned char *buffer, unsigned int skeysize)
+void skey2archive(u_int64_t *skey, unsigned char *buffer, uint skeysize)
 {
 
         int i = 0;
@@ -209,7 +209,7 @@ void skey2archive(unsigned long long int *skey, unsigned char *buffer, unsigned 
 
 }
 
-void archive2skey(unsigned long long int *skey, unsigned char *buffer, unsigned int skeysize)
+void archive2skey(u_int64_t *skey, unsigned char *buffer, uint skeysize)
 {
 
         int i = 0;
@@ -218,7 +218,7 @@ void archive2skey(unsigned long long int *skey, unsigned char *buffer, unsigned 
 
 }
 
-unsigned long long int get_next_block_address(device *device, unsigned long long address, int direction, int inblock)
+u_int64_t get_next_block_address(device *device, u_int64_t address, int direction, int inblock)
 {
 
         int offset = 0;
@@ -295,7 +295,7 @@ unsigned long long int get_next_block_address(device *device, unsigned long long
 
 }
 
-void get_next_space(device *device, unsigned long long address, int direction, space *space)
+void get_next_space(device *device, u_int64_t address, int direction, space *space)
 {
 
         if (direction == FORWARD) {
@@ -314,14 +314,14 @@ void get_next_space(device *device, unsigned long long address, int direction, s
 
 }
 
-unsigned long long int get_skey_in_space(device *device, space *space, int blocksize)
+u_int64_t get_skey_in_space(device *device, space *space, int blocksize)
 {
 
         int subrnd = 0;
 
         int flag = 0;
 
-        unsigned long long int result = 0;
+        u_int64_t result = 0;
 
         int max = space->end - space->begin;
 
@@ -349,11 +349,11 @@ unsigned long long int get_skey_in_space(device *device, space *space, int block
 }
 
 
-void make_skey(device *device, unsigned long long int *skey, unsigned int keysize, int blocksize)
+void make_skey(device *device, u_int64_t *skey, uint keysize, int blocksize)
 {
 
-        unsigned long long int rnd = 0;
-        unsigned int completed = 0;
+        u_int64_t rnd = 0;
+        uint completed = 0;
         int level = 0;
 
         int flag;
@@ -452,11 +452,11 @@ void make_skey(device *device, unsigned long long int *skey, unsigned int keysiz
 
 }
 
-void make_skey_main(device *device, int skeyfile, unsigned int keysize)
+void make_skey_main(device *device, int skeyfile, uint keysize)
 {
 
-        unsigned int i = 0;
-        unsigned long long int *skey = calloc(BUFFERED_BLOCKS, 8);
+        uint i = 0;
+        u_int64_t *skey = calloc(BUFFERED_BLOCKS, 8);
         unsigned char *buffer = calloc(BUFFERED_BLOCKS, SKEYRECORDSIZE);
 
         while (keysize > BUFFERED_BLOCKS) {
@@ -482,10 +482,10 @@ void make_skey_main(device *device, int skeyfile, unsigned int keysize)
 
 }
 
-void write_by_skey(device *device, int datafile, int skeyfile, unsigned int blocks)
+void write_by_skey(device *device, int datafile, int skeyfile, uint blocks)
 {
 
-        unsigned long long int *skey = calloc(BUFFERED_BLOCKS, 8);
+        u_int64_t *skey = calloc(BUFFERED_BLOCKS, 8);
         unsigned char *buffer = calloc(BUFFERED_BLOCKS, SKEYRECORDSIZE);
 
         unsigned char *block = calloc(BLOCKSIZE, BUFFERED_BLOCKS);
@@ -525,10 +525,10 @@ void write_by_skey(device *device, int datafile, int skeyfile, unsigned int bloc
 
 }
 
-void get_data(device *device, int datafile, unsigned long long int skeyaddress, unsigned int keysize)
+void get_data(device *device, int datafile, u_int64_t skeyaddress, uint keysize)
 {
 
-        unsigned long long int *skey = calloc(BUFFERED_BLOCKS, 8);
+        u_int64_t *skey = calloc(BUFFERED_BLOCKS, 8);
         unsigned char *buffer = calloc(BUFFERED_BLOCKS, SKEYRECORDSIZE);
 
         unsigned char *block = calloc(BLOCKSIZE, BUFFERED_BLOCKS);
@@ -568,7 +568,7 @@ void get_data(device *device, int datafile, unsigned long long int skeyaddress, 
 
 }
 
-unsigned long long int file_size(char *filename)
+u_int64_t file_size(char *filename)
 {
 
         struct stat filestat;
@@ -578,10 +578,20 @@ unsigned long long int file_size(char *filename)
 
 }
 
-unsigned long long int buffer_for_skey(device *device, unsigned int skeylen)
+u_int64_t ffile_size(int fd)
 {
 
-        unsigned long long int result = 0;
+        struct stat filestat;
+        fstat(fd, &filestat);
+
+        return filestat.st_size;
+
+}
+
+u_int64_t buffer_for_skey(device *device, uint skeylen)
+{
+
+        u_int64_t result = 0;
 
         make_skey(device, &result, 1, skeylen * SKEYRECORDSIZE);
 
@@ -589,7 +599,7 @@ unsigned long long int buffer_for_skey(device *device, unsigned int skeylen)
 
 }
 
-void write_skey(device *device, int skeyfile, unsigned int skeylen, unsigned long long int address)
+void write_skey(device *device, int skeyfile, uint skeylen, u_int64_t address)
 {
 
         lseek(device->descriptor, address + device->skip, SEEK_SET);
@@ -620,10 +630,10 @@ void write_skey(device *device, int skeyfile, unsigned int skeylen, unsigned lon
 
 }
 
-unsigned long long int device_size(device *device)
+u_int64_t device_size(device *device)
 {
 
-        unsigned long long size = 0;
+        u_int64_t size = 0;
 
         if(ioctl(device->descriptor, BLKGETSIZE64, &size) != -1)
                 ;
@@ -634,7 +644,7 @@ unsigned long long int device_size(device *device)
 
 }
 
-unsigned long long int set_skip(device *device) /**/
+u_int64_t set_skip(device *device) /**/
 {
 
         return 512;
@@ -657,8 +667,8 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
 
         struct pass password = {0, 0, 0};
 
-        unsigned int skeysize = 0;
-        unsigned long long int datalen = 0;
+        uint skeysize = 0;
+        u_int64_t datalen = 0;
 
         printf("\nOpening device...");
 
@@ -703,8 +713,8 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
         device.skip = set_skip(&device);
         printf(".done %u\n", device.skip);
 
-        unsigned long long int dataskeyaddress = 0;
-        unsigned long long int keyskeyaddress = 0;
+        u_int64_t dataskeyaddress = 0;
+        u_int64_t keyskeyaddress = 0;
 
         if (mode == ENCRYPT) {
 

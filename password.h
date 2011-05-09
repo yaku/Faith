@@ -10,13 +10,13 @@
 
 struct pass {
     
-        unsigned int skeysize;
-        unsigned long long int dataskeyaddress;
-        unsigned long long int keyskeyaddress;
+        uint skeysize;
+        u_int64_t dataskeyaddress;
+        u_int64_t keyskeyaddress;
     
 } pass;
 
-void stage2pass(unsigned long long int stage, unsigned char *pass, int sixbitsequences) 
+void stage2pass(u_int64_t stage, unsigned char *pass, int sixbitsequences) 
 {
 
         unsigned char table[] = "/1234567890abcdefghijklmnopqrstuvwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";    
@@ -28,12 +28,12 @@ void stage2pass(unsigned long long int stage, unsigned char *pass, int sixbitseq
 
 }
 
-unsigned long long int pass2stage( unsigned char *pass, int sixbitsequences) 
+u_int64_t pass2stage( unsigned char *pass, int sixbitsequences) 
 {
 
         unsigned char table[] = "/1234567890abcdefghijklmnopqrstuvwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-        unsigned long long int stage = 0;
+        u_int64_t stage = 0;
         int i = 0;
     
         for (i = 0; i < sixbitsequences; i++) {
@@ -45,10 +45,10 @@ unsigned long long int pass2stage( unsigned char *pass, int sixbitsequences)
         return stage;
 }
 
-unsigned long long int arr2long(unsigned char *arr, int bytes) 
+u_int64_t arr2long(unsigned char *arr, int bytes) 
 {
 
-        unsigned long long int stage = 0;
+        u_int64_t stage = 0;
         int i = 0;    
 
     
@@ -62,7 +62,7 @@ unsigned long long int arr2long(unsigned char *arr, int bytes)
 
 }
 
-void long2arr(unsigned long long int stage, unsigned char *arr, int bytes) 
+void long2arr(u_int64_t stage, unsigned char *arr, int bytes) 
 {
 
         int i = 0;     
@@ -75,9 +75,9 @@ void long2arr(unsigned long long int stage, unsigned char *arr, int bytes)
 void arr2pass(unsigned char *in, unsigned char *pass) 
 {
 
-        unsigned long long int stage1 = 0;
-        unsigned long long int stage2 = 0;
-        unsigned long long int stage3 = 0;
+        u_int64_t stage1 = 0;
+        u_int64_t stage2 = 0;
+        u_int64_t stage3 = 0;
 
         stage1 = arr2long(in, 6);
         stage2 = arr2long(in + 6, 6);
@@ -92,9 +92,9 @@ void arr2pass(unsigned char *in, unsigned char *pass)
 void pass2arr(unsigned char *pass, unsigned char *arr) 
 {
 
-        unsigned long long int stage1 = 0;
-        unsigned long long int stage2 = 0;
-        unsigned long long int stage3 = 0;
+        u_int64_t stage1 = 0;
+        u_int64_t stage2 = 0;
+        u_int64_t stage3 = 0;
     
         stage1=pass2stage(pass, 8);
         stage2=pass2stage(pass + 8, 8);
@@ -143,14 +143,14 @@ void prepare_password(unsigned char *charpassword, struct pass *password)
     
         password->keyskeyaddress  = arr2long(rawarr, 5);
         password->dataskeyaddress = arr2long(rawarr + 5, 5);
-        password->skeysize = (unsigned int) arr2long(rawarr + 10, 4);
+        password->skeysize = (uint) arr2long(rawarr + 10, 4);
     
         free(rawarr);
         free(mixedarr);
     
 }
 
-void make_password(unsigned char *outpassword, unsigned int skeysize, unsigned long long int dataskeyaddress, unsigned long long int keyskeyaddress) 
+void make_password(unsigned char *outpassword, uint skeysize, u_int64_t dataskeyaddress, u_int64_t keyskeyaddress) 
 {
 
         unsigned char *rawarr = calloc(15, 1);
@@ -158,7 +158,7 @@ void make_password(unsigned char *outpassword, unsigned int skeysize, unsigned l
     
         long2arr(keyskeyaddress, rawarr, 5);
         long2arr(dataskeyaddress, rawarr + 5, 5);
-        long2arr((unsigned long long int) skeysize, rawarr + 10, 4);
+        long2arr((u_int64_t) skeysize, rawarr + 10, 4);
         
         replace_raw2mixed(rawarr, mixedarr);
     

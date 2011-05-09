@@ -56,9 +56,9 @@ void remove_files(int mode, names filename) {
 
 }
 
-unsigned long long int arg_file_size(char *argument) {
+u_int64_t arg_file_size(char *argument) {
 
-        unsigned long long int result = 0;
+        u_int64_t result = 0;
 
         while (*argument) {
                 switch (*argument) {
