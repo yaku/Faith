@@ -52,6 +52,8 @@ void remove_files(int mode, names filename) {
         if (mode == ENCRYPT) {
                 unlink(filename.dataskey);
                 unlink(filename.keyskey);
+		unlink("space.1");
+		unlink("space.2");
         }
 
 }

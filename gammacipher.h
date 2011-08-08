@@ -19,7 +19,7 @@ void gamma_cipher(unsigned char *out, unsigned char *in, unsigned char *key, int
 
         int i;
         for (i = 0; i < len; i++)
-                *out++ = *in++ ^ *key++;
+                out[i] = in[i] ^ key[i];
 
 }
 
@@ -54,7 +54,7 @@ int gammacipher_main (int mode, names filename, config conf)
 
         if (mode==ENCRYPT) {
 
-                device keyfile = {kfd, file_size(filename.data), 0};
+                device keyfile = {kfd, file_size(filename.data)};
                 fill_random(&keyfile, keyfile.size, conf.randomizer);
 
                 lseek(kfd, 0, SEEK_SET);

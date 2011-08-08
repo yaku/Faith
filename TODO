@@ -1,10 +1,8 @@
 fast:
 filetables
-read and write mbr and boot partition
 random first file of archive
 
 long:
-GUI
 fix potential bug if writtenchars != readchars in gamma cipher
 show percentage in long functions
 
