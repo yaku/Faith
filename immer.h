@@ -203,7 +203,6 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 	uchar *skeyarchive = (uchar *) calloc(2 * SKEYRECORDSIZE, 1);
 	int lastwritten = 0;
 	int towrite 	= 0;
-	int index 	= 0;
 	space newspace;
 	
 	lseek(*spacefile, 0, SEEK_SET);
@@ -211,7 +210,7 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 			
 	while (lastused--) {
 	
-		towrite = *(used + index) - lastwritten;
+		towrite = *used - lastwritten;
 
 		while (towrite > BUFFERED_BLOCKS) {
 
@@ -231,7 +230,7 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
                 	pdie("Write failed");
 	
 		archive2skey(&(newspace.begin), buf + towrite * 2 * SKEYRECORDSIZE, 1);
-		newspace.end = *(skey + index);
+		newspace.end = *skey;
 		
 		if (newspace.end > (newspace.begin + BLOCKSIZE)) {
 		
@@ -243,7 +242,7 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 		
 		}
 		
-		newspace.begin = *(skey + index) + blocksize;
+		newspace.begin = *skey + blocksize;
 		archive2skey(&(newspace.end), buf + towrite * 2 * SKEYRECORDSIZE + SKEYRECORDSIZE, 1);
 
 		if (newspace.end > (newspace.begin + BLOCKSIZE)) {
@@ -256,9 +255,10 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 		
 		}
 		
-		lastwritten = *(used + index) + 1;
+		lastwritten = *used + 1;
 		
-		index++;
+		*used++;
+		*skey++;
 	}
 
 	int readbytes = 0;
@@ -331,7 +331,6 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
         uint rnd = 0;
         uint completed = 0;
         int level = 0;
-        int index = 0;
         
         uint spaces = ffile_size(*spacefile) / (SKEYRECORDSIZE * 2);
  
@@ -363,7 +362,7 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
 			
 			if (newspace.end > (newspace.begin + blocksize)) {
 			
-                        	*(skey + index + lastused) = get_skey_in_space(&newspace, blocksize);
+                        	*(skey + lastused) = get_skey_in_space(&newspace, blocksize);
                         	*(used + lastused) = rnd;
 
                         	lastused++;                        
@@ -383,12 +382,12 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
                 
                 	qsort(used, lastused, sizeof(uint), uint_cmp);
                 	
-                	memcpy(sortedskey, skey + index, lastused * 8); /**/
+                	memcpy(sortedskey, skey, lastused * 8); /**/
                 	qsort(sortedskey, lastused, 8, u_int64_t_cmp);			
 			
 			rewrite_space(spacefile, used, sortedskey, lastused, blocksize);
 			
-			index += lastused;			
+			skey += lastused;			
 
 			spaces = ffile_size(*spacefile) / (SKEYRECORDSIZE * 2);
 			
@@ -412,7 +411,7 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
         
         	qsort(used, lastused, sizeof(uint), uint_cmp);
         	
-		memcpy(sortedskey, skey + index, lastused * 8); /**/	
+		memcpy(sortedskey, skey, lastused * 8); /**/	
 		qsort(sortedskey, lastused, 8, u_int64_t_cmp);
 		
 		rewrite_space(spacefile, used, sortedskey, lastused, blocksize);
@@ -744,8 +743,8 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
                 printf("Making skey for key...\n");
                 make_skey_main(&spacefile, keyskeyfile, skeysize);
 
-                //printf("Filling device with random data...\n");
-                //fill_random(&activedev, activedev.size, conf.randomizer);
+                printf("Filling device with random data...\n");
+                fill_random(&activedev, activedev.size, conf.randomizer);
 
                 lseek(dataskeyfile, 0, SEEK_SET);
                 lseek(keyskeyfile, 0, SEEK_SET);
