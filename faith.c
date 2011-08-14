@@ -123,9 +123,7 @@ int main(int argc, char **argv)
         else
                 print_usage();
 
-        printf("Reading configuration file.\n");
-        config conf;
-        read_config(&conf, "config.cfg");
+        config conf = {0, 0};
 
         int i;
         char *list, *pass, *name;
@@ -216,7 +214,7 @@ int main(int argc, char **argv)
                 printf(".done\n");
 
                 printf("Main gamma cipher encryption started...");
-                gammacipher_main(mode, filename, conf);
+                gammacipher_main(mode, filename);
                 printf(".done\n");
 
                 printf("Dive data to device started...");
@@ -234,7 +232,7 @@ int main(int argc, char **argv)
                 printf(".done\n");
 
                 printf("Main gamma cipher decryption started...");
-                gammacipher_main(mode, filename, conf);
+                gammacipher_main(mode, filename);
                 printf(".done\n");
 
                 printf("Running cpio. Extractiong archive...");

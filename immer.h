@@ -9,7 +9,7 @@
  
  typedef unsigned char uchar;
  
- /* Globals. Fix */
+ /* Globals. Need fix */
  int space1fd;
  int space2fd;
 
@@ -47,65 +47,37 @@ u_int64_t ffile_size(int fd)
 
 }
 
-void fill_random(device *activedev, u_int64_t bytes, int type)
+void fill_random(device *activedev, u_int64_t bytes)
 {
 
         lseek(activedev->descriptor, 0, SEEK_SET);
 
         uchar *randombuffer = (uchar *) malloc(BUFFER_SIZE);
 
-        if (type == DEVURANDOM) {
+        printf("\nFilling by random data with system urandom randomizer\n");
 
-                printf("\nFilling by random data with system urandom randomizer\n");
+        int urandom = open("/dev/urandom",O_RDONLY);
 
-                int urandom = open("/dev/urandom",O_RDONLY);
+        if (urandom < 0)
+	        pdie("Opening pseudorandom numbers generator failed");
 
-                if (urandom < 0)
-                        pdie("Opening pseudorandom numbers generator failed");
+        while (bytes > BUFFER_SIZE) {
 
-                while (bytes > BUFFER_SIZE) {
+	        if (read(urandom, randombuffer, BUFFER_SIZE) < 0)
+	                pdie("Read failed");
 
-                        if (read(urandom, randombuffer, BUFFER_SIZE) < 0)
-                                pdie("Read failed");
-
-                        if (write(activedev->descriptor, randombuffer, BUFFER_SIZE) < 0)
-                                pdie("Write failed");
-
-                        bytes -= BUFFER_SIZE;
-
-                }
-
-                if (read(urandom, randombuffer, bytes) < 0)
-                        pdie("Read failed");
-
-                if (write(activedev->descriptor, randombuffer, bytes) < 0)
-                        pdie("Write failed");
-        }
-
-        if (type == SLRAND) {
-
-                printf("\nFilling by random data with standart library randomizer\n");
-
-                int i = 0;
-
-                while (bytes > BUFFER_SIZE) {
-
-                        for(i = 0; i < BUFFER_SIZE; i++)
-                                *(randombuffer+i) = rand() % 256;
-
-                        if (write(activedev->descriptor, randombuffer, BUFFER_SIZE) < 0)
-                                pdie("Write failed");
-
-                        bytes -= BUFFER_SIZE;
-                }
-
-                for(i = 0; i < bytes; i++)
-                        *(randombuffer+i) = rand() % 256;
-
-                if (write(activedev->descriptor, randombuffer, bytes) < 0)
+                if (write(activedev->descriptor, randombuffer, BUFFER_SIZE) < 0)
                         pdie("Write failed");
 
-        }
+                bytes -= BUFFER_SIZE;
+
+	}
+
+        if (read(urandom, randombuffer, bytes) < 0)
+	        pdie("Read failed");
+
+	if (write(activedev->descriptor, randombuffer, bytes) < 0)
+	        pdie("Write failed");
 
         free(randombuffer);
 
@@ -744,7 +716,7 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
                 make_skey_main(&spacefile, keyskeyfile, skeysize);
 
                 printf("Filling device with random data...\n");
-                fill_random(&activedev, activedev.size, conf.randomizer);
+                fill_random(&activedev, activedev.size);
 
                 lseek(dataskeyfile, 0, SEEK_SET);
                 lseek(keyskeyfile, 0, SEEK_SET);

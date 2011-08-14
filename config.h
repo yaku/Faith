@@ -7,46 +7,9 @@
  *
  */
 
-
 typedef struct config {
 
-        char randomizer;
         char isfile;
-        u_int64_t filesize; /**/
+        u_int64_t filesize;
 
 } config;
-
-void read_config(config *confstruct, char *configfilename)
-{
-
-        char *configstring = malloc(CONFIGSTRINGMAXLEN);
-
-        FILE *configfile = fopen(configfilename, "r");
-
-        if (configfile == NULL)
-                pdie("Open configuration file failed");
-
-        confstruct->randomizer = 0;
-        confstruct->isfile = 0;
-
-        while (fgets(configstring, CONFIGSTRINGMAXLEN, configfile)) {
-
-                if (strcmp(configstring, "randomizer=DEVURANDOM\n") == 0)
-                        confstruct->randomizer = DEVURANDOM;
-
-                else if (strcmp(configstring, "randomizer=SLRAND\n") == 0)
-                        confstruct->randomizer  = SLRAND;
-
-        }
-
-        if (confstruct->randomizer == 0) {
-
-                printf("Geting randomizer from configuration file failed.\nSetting default URANDOM\n");
-                confstruct->randomizer = DEVURANDOM;
-
-        }
-
-        free(configstring);
-
-}
-
