@@ -557,11 +557,11 @@ void get_data(device *activedev, int datafile, u_int64_t skeyaddress, uint keysi
 
                 for (i = 0; i < BUFFERED_BLOCKS; i++)
                         read_data(activedev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+
                 if (write(datafile, block, BLOCKSIZE * BUFFERED_BLOCKS) < 0)
                         pdie("Write failed");
 
                 skeyaddress += BUFFERED_BLOCKS * SKEYRECORDSIZE;
-
                 keysize -= BUFFERED_BLOCKS;
         }
 

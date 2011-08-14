@@ -105,13 +105,6 @@ u_int64_t arg_file_size(char *argument) {
 
 }
 
-void init_randomizer()
-{
-
-        srand(time(NULL));
-
-}
-
 int main(int argc, char **argv)
 {
 
@@ -202,7 +195,13 @@ int main(int argc, char **argv)
         char *command = malloc(1024);
 
         printf("Initialising random number numbers generator.\n");
-        srand(time(NULL));
+	uint seed = 0;
+	int randdev = open("/dev/random", O_RDONLY);
+	if (read(randdev, &seed, sizeof(uint)) < 0)
+		pdie("Read failed");
+        srand(seed);
+	close(randdev);
+	printf("DBG seed %u\n", seed);
 
         printf("Making names.\n");
         make_names(mode, filename);
