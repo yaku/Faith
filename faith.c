@@ -201,7 +201,6 @@ int main(int argc, char **argv)
 		pdie("Read failed");
         srand(seed);
 	close(randdev);
-	printf("DBG seed %u\n", seed);
 
         printf("Making names.\n");
         make_names(mode, filename);
