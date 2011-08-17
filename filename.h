@@ -17,7 +17,7 @@ typedef struct names {
 
 } names;
 
-void make_filename(int type, char* inputname, char *outputname)
+void make_filename(int type, char *inputname, char *outputname)
 {
 
         switch (type) {
@@ -42,7 +42,7 @@ void make_filename(int type, char* inputname, char *outputname)
 }
 
 
-void make_out_time_filename(int type, char *outputname)
+void make_out_time_filename(int type, char *outname)
 {
 
         time_t localunixtime = time(NULL);
@@ -50,21 +50,24 @@ void make_out_time_filename(int type, char *outputname)
         struct tm *timestruct = localtime(&localunixtime);
 
         if (type == DATA)
-            strftime(outputname, FILENAMEMAXLENGTH, "Data.out_%a.%d.%m.%Y_%H.%M.%S", timestruct);
+            strftime(outname, FILENAMEMAXLENGTH, "Data.out_%a.%d.%m.%Y_%H.%M.%S",
+            							    timestruct);
 
         else if (type == KEY)
-            strftime(outputname, FILENAMEMAXLENGTH, "Key.out_%a.%d.%m.%Y_%H.%M.%S", timestruct);
+            strftime(outname, FILENAMEMAXLENGTH, "Key.out_%a.%d.%m.%Y_%H.%M.%S",
+            							    timestruct);
 
 }
 
-void make_time_filename(char *outputname)
+void make_time_filename(char *outname)
 {
 
         time_t localunixtime = time(NULL);
 
         struct tm *timestruct = localtime(&localunixtime);
 
-        strftime(outputname, FILENAMEMAXLENGTH, "Data_%a_%d.%m.%Y_%H.%M.%S.cpio", timestruct);
+        strftime(outname, FILENAMEMAXLENGTH, "Data_%a_%d.%m.%Y_%H.%M.%S.cpio", 
+        							    timestruct);
 
 }
 

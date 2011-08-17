@@ -9,9 +9,8 @@
 
 void gamma_cipher(uchar *out, uchar *in, uchar *key, int len)
 {
-        int i;
-        for (i = 0; i < len; i++)
-                out[i] = in[i] ^ key[i];
+        while(len--)
+                *out++ = *in++ ^ *key++;
 }
 
 void gammacipher_main (int mode, names filename)
@@ -21,7 +20,7 @@ void gammacipher_main (int mode, names filename)
         int kfd;
         int wfd;
 
-        int writtenchars;
+        int written;
         int readchars;
         int keyreadchars;
 
@@ -45,9 +44,9 @@ void gammacipher_main (int mode, names filename)
         uchar *bigbuffer  = malloc(BUFFER_SIZE);
         uchar *ciphertext = malloc(BUFFER_SIZE);
 
-        if (mode==ENCRYPT) {
+        if (mode == ENCRYPT) {
 
-                device keyfile = {kfd, file_size(filename.data)};
+                struct device keyfile = {kfd, file_size(filename.data)};
                 fill_random(&keyfile, keyfile.size);
 
                 lseek(kfd, 0, SEEK_SET);
@@ -59,16 +58,22 @@ void gammacipher_main (int mode, names filename)
 		if ((readchars < 0) || (keyreadchars < 0))
 			pdie("Read failed");
 
-        	if (readchars != keyreadchars) /*possibly paranoia*/
+		/*
+		 * possibly paranoia
+		 * need fix
+		 */
+        	if (readchars != keyreadchars)
         	        pdie("Invalid keyfile");
 
         	gamma_cipher(ciphertext, bigbuffer, userkey, readchars);
 
-        	if ((writtenchars = write(wfd, ciphertext, readchars)) < 0)
-        	        pdie("Write failed");
-
-        	if (writtenchars != readchars) /*low level io error. Dangerous*/
-                	printf("IO warning\n");
+        	while (readchars) {
+                
+                	if ((written = write(wfd, ciphertext, readchars)) < 0)
+        	        	pdie("Write failed");
+                    	    
+                    	readchars -= written;
+                }
         } 
 
         free(userkey);

@@ -7,25 +7,23 @@
  *
  */
  
- typedef unsigned char uchar;
- 
  /* Globals. Need fix */
  int space1fd;
  int space2fd;
 
-typedef struct device {
+struct device {
 
         int descriptor;
         u_int64_t size;
 
-} device;
+};
 
-typedef struct space {
+struct space {
 
         u_int64_t begin;
         u_int64_t end;
 
-} space;
+};
 
 u_int64_t file_size(char *filename)
 {
@@ -47,40 +45,39 @@ u_int64_t ffile_size(int fd)
 
 }
 
-void fill_random(device *activedev, u_int64_t bytes)
+void fill_random(struct device *dev, u_int64_t bytes)
 {
 
-        lseek(activedev->descriptor, 0, SEEK_SET);
+        lseek(dev->descriptor, 0, SEEK_SET);
 
-        uchar *randombuffer = (uchar *) malloc(BUFFER_SIZE);
+        uchar *buffer = malloc(BUFFER_SIZE);
 
-        printf("\nFilling by random data with system urandom randomizer\n");
-
-        int urandom = open("/dev/urandom",O_RDONLY);
+        int urandom = open("/dev/urandom", O_RDONLY);
 
         if (urandom < 0)
 	        pdie("Opening pseudorandom numbers generator failed");
+	
+	int readchars, written;
+	
+        while (bytes) {
 
-        while (bytes > BUFFER_SIZE) {
-
-	        if (read(urandom, randombuffer, BUFFER_SIZE) < 0)
+	        if ((readchars = read(urandom, buffer, 
+	        	      (bytes > BUFFER_SIZE) ? BUFFER_SIZE : bytes)) < 0)
 	                pdie("Read failed");
-
-                if (write(activedev->descriptor, randombuffer, BUFFER_SIZE) < 0)
-                        pdie("Write failed");
-
-                bytes -= BUFFER_SIZE;
-
+		
+		bytes -= readchars;
+		
+                while (readchars) {
+                
+                	if ((written = write(dev->descriptor, buffer, 
+                						readchars)) < 0)
+                    		pdie("Write failed");
+                    	    
+                    	readchars -= written;
+                }
 	}
 
-        if (read(urandom, randombuffer, bytes) < 0)
-	        pdie("Read failed");
-
-	if (write(activedev->descriptor, randombuffer, bytes) < 0)
-	        pdie("Write failed");
-
-        free(randombuffer);
-
+        free(buffer);
 }
 
 void archive2skey(u_int64_t *skey, uchar *buffer, uint skeysize)
@@ -131,27 +128,28 @@ int int_cmp(const void *int1, const void *int2)
 {
 
 	return *((int *) int2) - *((int *) int1);
-
 }
 
-void read_space(int spacefile, uint index, space *outspace)
+void read_space(int spacefile, uint index, struct space *outspace)
 {
 
-	uchar *buf = (uchar *) calloc(SKEYRECORDSIZE * 2, 1);
+	uchar *buffer = calloc(SKEYRECORDSIZE * 2, 1);
 	
-	if (pread(spacefile, buf, SKEYRECORDSIZE * 2, index * SKEYRECORDSIZE * 2) < 0)
+	if (pread(spacefile, buffer, SKEYRECORDSIZE * 2, 
+						index * SKEYRECORDSIZE * 2) < 0)
 		pdie("Read failed");
 
 	outspace->begin = 0;
 	outspace->end = 0;
 	
-	archive2skey(&(outspace->begin), buf, 1);
-	archive2skey(&(outspace->end), buf + SKEYRECORDSIZE, 1);
+	archive2skey(&(outspace->begin), buffer, 1);
+	archive2skey(&(outspace->end), buffer + SKEYRECORDSIZE, 1);
 	
-	free(buf);
+	free(buffer);
 }
 
-void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, int blocksize)
+void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, 
+								int blocksize)
 {
 	extern int space1fd;
 	extern int space2fd;
@@ -171,11 +169,11 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 		newspacefile = space1fd;
 	}
 
-	uchar *buf 	   = (uchar *) calloc(2 * SKEYRECORDSIZE * BUFFERED_BLOCKS, 1); 
-	uchar *skeyarchive = (uchar *) calloc(2 * SKEYRECORDSIZE, 1);
+	uchar *buffer = calloc(2 * SKEYRECORDSIZE * BUFFERED_BLOCKS, 1); 
+	uchar *skeyarchive = calloc(2 * SKEYRECORDSIZE, 1);
 	int lastwritten = 0;
 	int towrite 	= 0;
-	space newspace;
+	struct space newspace;
 	
 	lseek(*spacefile, 0, SEEK_SET);
 	lseek(newspacefile, 0, SEEK_SET);
@@ -186,22 +184,24 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 
 		while (towrite > BUFFERED_BLOCKS) {
 
-                	if (read(*spacefile, buf, 2 * SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
+                	if (read(*spacefile, buffer,
+                		      2 * SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
                         	pdie("Read failed");
 
-                	if (write(newspacefile, buf, 2 * SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
+                	if (write(newspacefile, buffer,
+                		      2 * SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
                         	pdie("Write failed");
 
                 	towrite -= BUFFERED_BLOCKS;
         	}
 
-        	if (read(*spacefile, buf, 2 * SKEYRECORDSIZE * (towrite + 1)) < 0)
+        	if (read(*spacefile, buffer, 2 * SKEYRECORDSIZE * (towrite + 1)) < 0)
                 	pdie("Read failed");
 
-        	if (write(newspacefile, buf, 2 * SKEYRECORDSIZE * towrite) < 0)
+        	if (write(newspacefile, buffer, 2 * SKEYRECORDSIZE * towrite) < 0)
                 	pdie("Write failed");
 	
-		archive2skey(&(newspace.begin), buf + towrite * 2 * SKEYRECORDSIZE, 1);
+		archive2skey(&(newspace.begin), buffer + towrite * 2 * SKEYRECORDSIZE, 1);
 		newspace.end = *skey;
 		
 		if (newspace.end > (newspace.begin + BLOCKSIZE)) {
@@ -215,7 +215,7 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 		}
 		
 		newspace.begin = *skey + blocksize;
-		archive2skey(&(newspace.end), buf + towrite * 2 * SKEYRECORDSIZE + SKEYRECORDSIZE, 1);
+		archive2skey(&(newspace.end), buffer + towrite * 2 * SKEYRECORDSIZE + SKEYRECORDSIZE, 1);
 
 		if (newspace.end > (newspace.begin + BLOCKSIZE)) {
 	
@@ -233,30 +233,31 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused, in
 		*skey++;
 	}
 
-	int readbytes = 0;
+	int readbytes, written;
 
-	if ((readbytes = read(*spacefile, buf, 2 * SKEYRECORDSIZE * BUFFERED_BLOCKS)) < 0)
-              	pdie("Read failed");
-
-	while (readbytes) {
-
-               	if (write(newspacefile, buf, readbytes) < 0)
-                      	pdie("Write failed");
-
-		if ((readbytes = read(*spacefile, buf, 2 * SKEYRECORDSIZE * BUFFERED_BLOCKS)) < 0)
-        	      	pdie("Read failed");
+	while (readbytes = read(*spacefile, buffer,
+					2 * SKEYRECORDSIZE * BUFFERED_BLOCKS)) {
 	
+		if (readbytes < 0)
+			pdie("Read failed");
+		
+		while(readbytes) {
+               		if ((written = write(newspacefile, buffer, 
+               							readbytes)) < 0)
+                	      	pdie("Write failed");
+                	
+                	readbytes -= written;
+                }
        	}
 
 
 	*spacefile = newspacefile;
 
-	free(buf);
+	free(buffer);
 	free(skeyarchive);
-	
 }
 
-u_int64_t get_skey_in_space(space *activespace, int blocksize)
+u_int64_t get_skey_in_space(struct space *activespace, int blocksize)
 {
 
         uint subrnd = 0;
@@ -313,16 +314,16 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
 
         }
 
-	uint *used = (uint *) calloc(keysize, sizeof(uint));
+	uint *used = calloc(keysize, sizeof(uint));
 	int i;
 	for (i = 0; i < keysize; i++)
 		*(used + i) = (uint) -1;
 
 	int lastused = 0;
 		
-	u_int64_t *sortedskey = (u_int64_t *) calloc(keysize, 8);
+	u_int64_t *sortedskey = calloc(keysize, 8);
 
-	space newspace = {0, 0};
+	struct space newspace = {0, 0};
 
         while (completed < keysize) {
 
@@ -398,8 +399,8 @@ void make_skey_main(int *spacefile, int skeyfile, uint keysize)
 {
 
         uint i = 0;
-        u_int64_t *skey   = (u_int64_t *) calloc(BUFFERED_BLOCKS, 8);
-        uchar 	  *buffer = (uchar *) 	  calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
+        u_int64_t *skey = calloc(BUFFERED_BLOCKS, 8);
+        uchar *buffer = calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
 
         while (keysize > BUFFERED_BLOCKS) {
 
@@ -424,18 +425,18 @@ void make_skey_main(int *spacefile, int skeyfile, uint keysize)
 
 }
 
-void write_data(device *activedev, uchar *block, int length, u_int64_t address)
+void write_data(struct device *dev, uchar *block, int length, u_int64_t address)
 {
 
         extern int errno;
         int writtenchars;
 
-        lseek(activedev->descriptor, address, SEEK_SET);
+        lseek(dev->descriptor, address, SEEK_SET);
         
         int offset = 0;
 
         while (length != 0) {
-                if ((writtenchars = write(activedev->descriptor, block + offset, length)) < 0)
+                if ((writtenchars = write(dev->descriptor, block + offset, length)) < 0)
                         if (errno = EINTR)
                                 continue;
                         else
@@ -446,18 +447,18 @@ void write_data(device *activedev, uchar *block, int length, u_int64_t address)
         }
 }
 
-void read_data(device *activedev, uchar *block, uint length, u_int64_t address)
+void read_data(struct device *dev, uchar *block, uint length, u_int64_t address)
 {
 
         extern int errno;
 
-        lseek(activedev->descriptor, address, SEEK_SET);
+        lseek(dev->descriptor, address, SEEK_SET);
 
         int ret = 0;
         int offset = 0;
 
         while (length != 0) {
-                if ((ret = read(activedev->descriptor, block + offset, length)) < 0)
+                if ((ret = read(dev->descriptor, block + offset, length)) < 0)
                         if (errno == EINTR)
                                 continue;
                         else
@@ -470,12 +471,12 @@ void read_data(device *activedev, uchar *block, uint length, u_int64_t address)
 
 }
 
-void write_by_skey(device *activedev, int datafile, int skeyfile, uint blocks)
+void write_by_skey(struct device *dev, int datafile, int skeyfile, uint blocks)
 {
 
-        u_int64_t *skey   = (u_int64_t *) calloc(BUFFERED_BLOCKS, 8);
-        uchar     *buffer = (uchar *)     calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
-        uchar     *block  = (uchar *)     calloc(BLOCKSIZE * BUFFERED_BLOCKS, 1);
+        u_int64_t *skey = calloc(BUFFERED_BLOCKS, 8);
+        uchar *buffer = calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
+        uchar *block  = calloc(BLOCKSIZE * BUFFERED_BLOCKS, 1);
 
         int i;
 
@@ -490,7 +491,8 @@ void write_by_skey(device *activedev, int datafile, int skeyfile, uint blocks)
                         pdie("Read failed");
 
                 for (i = 0; i < BUFFERED_BLOCKS; i++)
-                        write_data(activedev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+                        write_data(dev, block + i * BLOCKSIZE, BLOCKSIZE,
+                        					   *(skey + i));
 
                 blocks -= BUFFERED_BLOCKS;
         }
@@ -504,7 +506,7 @@ void write_by_skey(device *activedev, int datafile, int skeyfile, uint blocks)
                 pdie("Read failed");
 
         for (i = 0; i < blocks; i++)
-                write_data(activedev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+                write_data(dev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
 
         free(skey);
         free(buffer);
@@ -512,23 +514,24 @@ void write_by_skey(device *activedev, int datafile, int skeyfile, uint blocks)
 
 }
 
-void get_data(device *activedev, int datafile, u_int64_t skeyaddress, uint keysize)
+void get_data(struct device *dev, int datafile, u_int64_t skeyaddress, 
+								   uint keysize)
 {
 
-        u_int64_t *skey   = (u_int64_t *) calloc(BUFFERED_BLOCKS, 8);
-        uchar     *buffer = (uchar *)     calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
-        uchar     *block  = (uchar *)     calloc(BLOCKSIZE * BUFFERED_BLOCKS, 1);
+        u_int64_t *skey   = calloc(BUFFERED_BLOCKS, 8);
+        uchar     *buffer = calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
+        uchar     *block  = calloc(BLOCKSIZE * BUFFERED_BLOCKS, 1);
 
         int i;
 
         while (keysize > BUFFERED_BLOCKS) {
 
-                read_data(activedev, buffer, BUFFERED_BLOCKS * SKEYRECORDSIZE, skeyaddress);
+                read_data(dev, buffer, BUFFERED_BLOCKS * SKEYRECORDSIZE, skeyaddress);
 
                 archive2skey(skey, buffer, BUFFERED_BLOCKS);
 
                 for (i = 0; i < BUFFERED_BLOCKS; i++)
-                        read_data(activedev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+                        read_data(dev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
 
                 if (write(datafile, block, BLOCKSIZE * BUFFERED_BLOCKS) < 0)
                         pdie("Write failed");
@@ -537,12 +540,12 @@ void get_data(device *activedev, int datafile, u_int64_t skeyaddress, uint keysi
                 keysize -= BUFFERED_BLOCKS;
         }
 
-        read_data(activedev, buffer, keysize * SKEYRECORDSIZE, skeyaddress);
+        read_data(dev, buffer, keysize * SKEYRECORDSIZE, skeyaddress);
 
         archive2skey(skey, buffer, keysize);
 
         for (i = 0; i < keysize; i++)
-                read_data(activedev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
+                read_data(dev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
 
         if (write(datafile, block, BLOCKSIZE * keysize) < 0)
                 pdie("Write failed");
@@ -564,13 +567,13 @@ u_int64_t buffer_for_skey(int *spacefile, uint skeylen)
 
 }
 
-void write_skey(device *activedev, int skeyfile, uint skeylen, u_int64_t address)
+void write_skey(struct device *dev, int skeyfile, uint skeylen, u_int64_t address)
 {
 
-        lseek(activedev->descriptor, address, SEEK_SET);
+        lseek(dev->descriptor, address, SEEK_SET);
         lseek(skeyfile, 0, SEEK_SET);
 
-        uchar *block = (uchar *) calloc(SKEYRECORDSIZE * BUFFERED_BLOCKS, 1);
+        uchar *block = calloc(SKEYRECORDSIZE * BUFFERED_BLOCKS, 1);
 
         int readchars = 0;
 
@@ -579,7 +582,7 @@ void write_skey(device *activedev, int skeyfile, uint skeylen, u_int64_t address
                 if (read(skeyfile, block, SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
                         pdie("Read failed");
 
-                if (write(activedev->descriptor, block, SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
+                if (write(dev->descriptor, block, SKEYRECORDSIZE * BUFFERED_BLOCKS) < 0)
                         pdie("Write failed");
 
                 skeylen -= BUFFERED_BLOCKS;
@@ -588,21 +591,19 @@ void write_skey(device *activedev, int skeyfile, uint skeylen, u_int64_t address
         if (read(skeyfile, block, SKEYRECORDSIZE * skeylen) < 0)
                 pdie("Read failed");
 
-        if (write(activedev->descriptor, block, SKEYRECORDSIZE * skeylen) < 0)
+        if (write(dev->descriptor, block, SKEYRECORDSIZE * skeylen) < 0)
                 pdie("Write failed");
 
         free(block);
 
 }
 
-u_int64_t device_size(device *activedev)
+u_int64_t device_size(struct device *dev)
 {
 
         u_int64_t size = 0;
 
-        if(ioctl(activedev->descriptor, BLKGETSIZE64, &size) != -1)
-                ;
-        else
+        if(ioctl(dev->descriptor, BLKGETSIZE64, &size) < 0)
                 pdie("Getting device size failed");
 
         return size;
@@ -615,7 +616,7 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
 	extern int space1fd;
 	extern int space2fd;
 
-        device activedev;
+        struct device dev;
 
         int datafile;
         int keyfile;
@@ -636,11 +637,11 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
         printf("\nOpening device...");
 
         if (conf.isfile)
-                activedev.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                dev.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         else
-                activedev.descriptor = open(devicename, O_RDWR);
+                dev.descriptor = open(devicename, O_RDWR);
 
-        if (activedev.descriptor < 0)
+        if (dev.descriptor < 0)
                 pdie("Device open failed. Maybe wrong device selected?");
 
         printf(".done\n");
@@ -682,11 +683,11 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
 
                 printf("Getting device size...");
                 if (conf.isfile)
-                        activedev.size = conf.filesize;
+                        dev.size = conf.filesize;
                 else
-                        activedev.size = device_size(&activedev);
+                        dev.size = device_size(&dev);
                         
-                printf(".done %lld\n", activedev.size);
+                printf(".done %lld\n", dev.size);
 
                 printf("Calculating length of input...");
                 datalen = file_size(filename.data);
@@ -696,10 +697,10 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
                 skeysize = datalen/BLOCKSIZE;
                 printf(".done %u\n", skeysize);
                 
-                uchar *firstspace = (uchar *) calloc(SKEYRECORDSIZE * 2, 1);
+                uchar *firstspace = calloc(SKEYRECORDSIZE * 2, 1);
                 u_int64_t zero = 0;
                 skey2archive(&(zero), firstspace, 1);
-		skey2archive(&(activedev.size), firstspace + SKEYRECORDSIZE, 1);
+		skey2archive(&(dev.size), firstspace + SKEYRECORDSIZE, 1);
 		
 		if (write(spacefile, firstspace, 2 * SKEYRECORDSIZE) < 0)
                 	pdie("Write failed");
@@ -716,22 +717,22 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
                 make_skey_main(&spacefile, keyskeyfile, skeysize);
 
                 printf("Filling device with random data...\n");
-                fill_random(&activedev, activedev.size);
+                fill_random(&dev, dev.size);
 
                 lseek(dataskeyfile, 0, SEEK_SET);
                 lseek(keyskeyfile, 0, SEEK_SET);
 
                 printf("Writing data by skey...\n");
-                write_by_skey(&activedev, datafile, dataskeyfile, skeysize);
+                write_by_skey(&dev, datafile, dataskeyfile, skeysize);
 
                 printf("Writing key by skey...\n");
-                write_by_skey(&activedev, keyfile, keyskeyfile, skeysize);
+                write_by_skey(&dev, keyfile, keyskeyfile, skeysize);
 
                 printf("Writing skey's...\n");
-                write_skey(&activedev, dataskeyfile, skeysize, dataskeyaddress);
-                write_skey(&activedev, keyskeyfile, skeysize, keyskeyaddress);
+                write_skey(&dev, dataskeyfile, skeysize, dataskeyaddress);
+                write_skey(&dev, keyskeyfile, skeysize, keyskeyaddress);
 
-                uchar *outpassword = (uchar *) calloc(19, 1); /**/
+                uchar *outpassword = calloc(19, 1); /**/
                 make_password(outpassword, skeysize, dataskeyaddress, keyskeyaddress);
 
                 printf("Your's password: %s\n", outpassword);
@@ -750,15 +751,15 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
                 printf(".done %u\n", skeysize);
 
                 printf("Getting data by skey...");
-                get_data(&activedev, outdatafile, password.dataskeyaddress, skeysize);
+                get_data(&dev, outdatafile, password.dataskeyaddress, skeysize);
                 printf(".done\n");
 
                 printf("Getting key by skey...");
-                get_data(&activedev, outkeyfile, password.keyskeyaddress, skeysize);
+                get_data(&dev, outkeyfile, password.keyskeyaddress, skeysize);
                 printf(".done\n");
         }
 
-        close(activedev.descriptor);
+        close(dev.descriptor);
         if (mode == ENCRYPT) {
         	close(spacefile);
                 close(datafile);

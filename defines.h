@@ -6,6 +6,8 @@
  * This file is licensed under GPLv3.
  *
  */
+ 
+typedef unsigned char uchar;
 
 #define ENCRYPT 0
 #define DECRYPT 1
@@ -25,20 +27,6 @@
 
 #define BUFFERED_BLOCKS (BUFFER_SIZE / BLOCKSIZE)
 
-#define FILENAMEMAXLENGTH 512
-
 #define SKEYRECORDSIZE 5
 
 #define MAXLEVEL 2000
-
-#define CONFIGSTRINGMAXLEN 1024
-
-#define DEVURANDOM 1
-#define SLRAND 2
-
-#define STEP 4096
-
-#define FORWARD  1
-#define BACKWARD 2
-#define BAD      3
-

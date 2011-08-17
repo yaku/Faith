@@ -207,44 +207,38 @@ int main(int argc, char **argv)
 
                 printf("Encryption started\n");
 
-                printf("Running cpio. Making archive...");
+                printf("Running cpio. Making archive.\n");
                 snprintf(command, 1024, "cpio -o -O %s < %s", filename.data, list);
                 if (system(command) != 0)
                         pdie("Cpio error");
-                printf(".done\n");
 
-                printf("Main gamma cipher encryption started...");
+                printf("Gamma cipher encryption\n");
                 gammacipher_main(mode, filename);
-                printf(".done\n");
-
-                printf("Dive data to device started...");
+                
+                printf("Diving data into device\n");
                 immer_main(mode, name, filename, 0, conf);
-                printf(".done\n");
-
+                
         }
 
         if (mode == DECRYPT) {
 
                 printf("Decryption started\n");
 
-                printf("Re-diving data from device...");
+                printf("Re-diving data from device\n");
                 immer_main(mode, name, filename, pass, conf);
-                printf(".done\n");
 
-                printf("Main gamma cipher decryption started...");
+                printf("Gamma cipher decryption\n");
                 gammacipher_main(mode, filename);
-                printf(".done\n");
 
-                printf("Running cpio. Extractiong archive...");
+                printf("Running cpio. Extractiong archive.\n");
                 snprintf(command, 1024, "cpio -id -I %s", filename.enc);
                 if (system(command) != 0)
                         pdie("Cpio error");
-                printf(".done\n");
 
         }
 
         printf("Cleaning work directory. Removing files.\n");
-                remove_files(mode, filename);
+	remove_files(mode, filename);
 
         printf("All operations successfully completed!\n");
 
@@ -256,6 +250,4 @@ int main(int argc, char **argv)
         free(command);
 
         return 0;
-
 }
-
