@@ -16,71 +16,73 @@ void gamma_cipher(uchar *out, uchar *in, uchar *key, int len)
 void gammacipher_main (int mode, names filename)
 {
 
-        int rfd;
-        int kfd;
-        int wfd;
+        int input_file = -1;
+        int key_file = -1;
+        int output_file = -1;
 
-        int written;
-        int readchars;
-        int keyreadchars;
-
-        if ((rfd = open(filename.data, O_RDONLY)) < 0)
+        if ((input_file = open(filename.data, O_RDONLY)) < 0)
                 pdie("Open failed");
 
-        if ((wfd = open(filename.enc, O_WRONLY | O_CREAT | O_TRUNC, 
-				      S_IWUSR | S_IRUSR)) < 0)
+        if ((output_file = open(filename.enc, O_WRONLY | O_CREAT | O_TRUNC, 
+				      			S_IWUSR | S_IRUSR)) < 0)
                 pdie("Open failed");
 
         if (mode == ENCRYPT)
-                if ((kfd = open(filename.key, O_RDWR | O_CREAT | O_TRUNC, 
-					      S_IWUSR | S_IRUSR)) < 0)
+                if ((key_file = open(filename.key, O_RDWR | O_CREAT | O_TRUNC, 
+					      		S_IWUSR | S_IRUSR)) < 0)
                         pdie("Open failed");
 
         if (mode == DECRYPT)
-                if ((kfd = open(filename.key, O_RDONLY)) < 0)
+                if ((key_file = open(filename.key, O_RDONLY)) < 0)
                         pdie("Open failed");
-
-        uchar *userkey    = malloc(BUFFER_SIZE);
-        uchar *bigbuffer  = malloc(BUFFER_SIZE);
-        uchar *ciphertext = malloc(BUFFER_SIZE);
 
         if (mode == ENCRYPT) {
 
-                struct device keyfile = {kfd, file_size(filename.data)};
+                struct device keyfile = {key_file, file_size(filename.data)};
                 fill_random(&keyfile, keyfile.size);
 
-                lseek(kfd, 0, SEEK_SET);
+                lseek(key_file, 0, SEEK_SET);
         }
+        
+        uchar *key_buffer = malloc(BUFFER_SIZE);
+        uchar *input_buffer = malloc(BUFFER_SIZE);
+        uchar *output_buffer = malloc(BUFFER_SIZE);
+	
+        int written_bytes;
+        int bytes_read;
+        int keybytes_read;
 
-        while ((readchars = read(rfd, bigbuffer, BUFFER_SIZE)) && 
-	       (keyreadchars = read(kfd, userkey, BUFFER_SIZE))) {
+        while ((bytes_read = read(input_file, input_buffer, BUFFER_SIZE)) && 
+	       (keybytes_read = read(key_file, key_buffer, BUFFER_SIZE))) {
 		    
-		if ((readchars < 0) || (keyreadchars < 0))
+		if ((bytes_read < 0) || (keybytes_read < 0))
 			pdie("Read failed");
 
 		/*
 		 * possibly paranoia
 		 * need fix
 		 */
-        	if (readchars != keyreadchars)
+        	if (bytes_read != keybytes_read)
         	        pdie("Invalid keyfile");
 
-        	gamma_cipher(ciphertext, bigbuffer, userkey, readchars);
+        	gamma_cipher(output_buffer, input_buffer, key_buffer, 
+        							    bytes_read);
 
-        	while (readchars) {
+        	while (bytes_read) {
                 
-                	if ((written = write(wfd, ciphertext, readchars)) < 0)
+                	if ((written_bytes = write(output_file, output_buffer,
+                					       bytes_read)) < 0)
         	        	pdie("Write failed");
                     	    
-                    	readchars -= written;
+                    	bytes_read -= written_bytes;
                 }
         } 
 
-        free(userkey);
-        free(bigbuffer);
-        free(ciphertext);
+        free(key_buffer);
+        free(input_buffer);
+        free(output_buffer);
 
-        close(rfd);
-        close(wfd);
-        close(kfd);
+        close(input_file);
+        close(output_file);
+        close(key_file);
 }

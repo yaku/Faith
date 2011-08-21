@@ -229,14 +229,14 @@ void rewrite_space(int *spacefile, uint *used, u_int64_t *skey, int lastused,
 		
 		lastwritten = *used + 1;
 		
-		*used++;
-		*skey++;
+		used++;
+		skey++;
 	}
 
 	int readbytes, written;
 
-	while (readbytes = read(*spacefile, buffer,
-					2 * SKEYRECORDSIZE * BUFFERED_BLOCKS)) {
+	while ((readbytes = read(*spacefile, buffer,
+					2 * SKEYRECORDSIZE * BUFFERED_BLOCKS))) {
 	
 		if (readbytes < 0)
 			pdie("Read failed");
@@ -261,19 +261,19 @@ u_int64_t get_skey_in_space(struct space *activespace, int blocksize)
 {
 
         uint subrnd = 0;
-        int flag = 0;
+        int found = 0;
         u_int64_t result = 0;
 
         uint max = activespace->end - activespace->begin; /*potential error uint*/
 
-        while (!flag) {
+        while (!found) {
 
                 subrnd = rand() % max;
 
                 if (activespace->end > (activespace->begin + subrnd + blocksize)) {
 
                         result = activespace->begin + subrnd;
-                        flag = 1;
+                        found = 1;
 
                 } else {
 
@@ -300,10 +300,6 @@ int simple_search(uint key, uint *array, int maxindex)
 
 void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
 {
-
-        uint rnd = 0;
-        uint completed = 0;
-        int level = 0;
         
         uint spaces = ffile_size(*spacefile) / (SKEYRECORDSIZE * 2);
  
@@ -314,29 +310,33 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
 
         }
 
-	uint *used = calloc(keysize, sizeof(uint));
+	uint *usedids = calloc(keysize, sizeof(uint));
 	int i;
 	for (i = 0; i < keysize; i++)
-		*(used + i) = (uint) -1;
+		*(usedids + i) = (uint) -1;
 
 	int lastused = 0;
 		
 	u_int64_t *sortedskey = calloc(keysize, 8);
 
 	struct space newspace = {0, 0};
+	
+	uint newspaceid = 0;
+        uint completed = 0;
+        int level = 0;
 
         while (completed < keysize) {
 
-                rnd = rand() % spaces;
+                newspaceid = rand() % spaces;
 
-                if (simple_search(rnd, used, lastused + 1) == 0) {
+                if (simple_search(newspaceid, usedids, lastused + 1) == 0) {
 
-			read_space(*spacefile, rnd, &newspace);
+			read_space(*spacefile, newspaceid, &newspace);
 			
 			if (newspace.end > (newspace.begin + blocksize)) {
 			
                         	*(skey + lastused) = get_skey_in_space(&newspace, blocksize);
-                        	*(used + lastused) = rnd;
+                        	*(usedids + lastused) = newspaceid;
 
                         	lastused++;                        
                         	completed++;
@@ -353,14 +353,15 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
                 
                 if ((spaces == 0) || (level == MAXLEVEL)) {
                 
-                	qsort(used, lastused, sizeof(uint), uint_cmp);
+                	qsort(usedids, lastused, sizeof(uint), uint_cmp);
                 	
                 	memcpy(sortedskey, skey, lastused * 8); /**/
                 	qsort(sortedskey, lastused, 8, u_int64_t_cmp);			
 			
-			rewrite_space(spacefile, used, sortedskey, lastused, blocksize);
+			rewrite_space(spacefile, usedids, sortedskey, lastused, 
+								     blocksize);
 			
-			skey += lastused;			
+			skey += lastused;
 
 			spaces = ffile_size(*spacefile) / (SKEYRECORDSIZE * 2);
 			
@@ -372,7 +373,7 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
         		}
 			
 			for (i = 0; i < lastused; i++)
-				*(used + i) = (uint) -1;
+				*(usedids + i) = (uint) -1;
 	
 			lastused = 0;
                 
@@ -382,23 +383,22 @@ void make_skey(int *spacefile, u_int64_t *skey, uint keysize, int blocksize)
         
         if (lastused != 0) {
         
-        	qsort(used, lastused, sizeof(uint), uint_cmp);
+        	qsort(usedids, lastused, sizeof(uint), uint_cmp);
         	
 		memcpy(sortedskey, skey, lastused * 8); /**/	
 		qsort(sortedskey, lastused, 8, u_int64_t_cmp);
 		
-		rewrite_space(spacefile, used, sortedskey, lastused, blocksize);
+		rewrite_space(spacefile, usedids, sortedskey, lastused, blocksize);
 	
 	}
 	
-	free(used);
+	free(usedids);
 	free(sortedskey);
 }
 
 void make_skey_main(int *spacefile, int skeyfile, uint keysize)
 {
 
-        uint i = 0;
         u_int64_t *skey = calloc(BUFFERED_BLOCKS, 8);
         uchar *buffer = calloc(BUFFERED_BLOCKS * SKEYRECORDSIZE, 1);
 
@@ -436,11 +436,13 @@ void write_data(struct device *dev, uchar *block, int length, u_int64_t address)
         int offset = 0;
 
         while (length != 0) {
-                if ((writtenchars = write(dev->descriptor, block + offset, length)) < 0)
-                        if (errno = EINTR)
+                if ((writtenchars = write(dev->descriptor, block + offset, length)) < 0) {
+                
+                        if (errno == EINTR)
                                 continue;
                         else
                                 pdie("Write failed");
+                }
 
                 length -= writtenchars;
                 offset += writtenchars;
@@ -458,11 +460,13 @@ void read_data(struct device *dev, uchar *block, uint length, u_int64_t address)
         int offset = 0;
 
         while (length != 0) {
-                if ((ret = read(dev->descriptor, block + offset, length)) < 0)
+                if ((ret = read(dev->descriptor, block + offset, length)) < 0) {
+                
                         if (errno == EINTR)
                                 continue;
                         else
                                 pdie("Read failed");
+                }
 
                 length -= ret;
                 offset += ret;
@@ -575,7 +579,7 @@ void write_skey(struct device *dev, int skeyfile, uint skeylen, u_int64_t addres
 
         uchar *block = calloc(SKEYRECORDSIZE * BUFFERED_BLOCKS, 1);
 
-        int readchars = 0;
+        //int readchars = 0;
 
         while (skeylen > BUFFERED_BLOCKS) {
 
@@ -610,32 +614,15 @@ u_int64_t device_size(struct device *dev)
 
 }
 
-void immer_main(int mode, char *devicename, names filename, char *charpassword, config conf)
+void immer_main(int mode, char *devicename, names filename, uchar *charpassword, config conf)
 {
 
 	extern int space1fd;
 	extern int space2fd;
 
+        printf("Opening device...\n");
         struct device dev;
-
-        int datafile;
-        int keyfile;
-
-        int outdatafile;
-        int outkeyfile;
-
-        int dataskeyfile;
-        int keyskeyfile;
         
-        int spacefile;
-
-        struct pass password = {0, 0, 0};
-
-        uint skeysize = 0;
-        u_int64_t datalen = 0;
-
-        printf("\nOpening device...");
-
         if (conf.isfile)
                 dev.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
         else
@@ -644,41 +631,50 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
         if (dev.descriptor < 0)
                 pdie("Device open failed. Maybe wrong device selected?");
 
-        printf(".done\n");
-
-        printf("Opening files...");
+        printf("Opening files...\n");
+        int datafile;
+        int keyfile;
+        int dataskeyfile;
+        int keyskeyfile;
+        int spacefile;
 
         if (mode == ENCRYPT) {
 
                 datafile = open(filename.enc, O_RDONLY);
                 keyfile  = open(filename.key, O_RDONLY);
 
-                dataskeyfile = open(filename.dataskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-                keyskeyfile  = open(filename.keyskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                dataskeyfile = open(filename.dataskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+                keyskeyfile  = open(filename.keyskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 		
-		space1fd = open("space.1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-		space2fd = open("space.2", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+		space1fd = open("space.1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		space2fd = open("space.2", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
                 spacefile = space1fd;
                 if (datafile < 0 || keyfile < 0 || dataskeyfile < 0 || keyskeyfile < 0 || spacefile < 0)
                         pdie("Open failed");
 
         }
+        
+        int outdatafile;
+        int outkeyfile;
 
         if (mode == DECRYPT) {
 
-                outdatafile = open(filename.data, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-                outkeyfile  = open(filename.key,  O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                outdatafile = open(filename.data, O_WRONLY | O_CREAT | O_TRUNC, 
+                					     S_IRUSR | S_IWUSR);
+                outkeyfile  = open(filename.key,  O_WRONLY | O_CREAT | O_TRUNC, 
+                					     S_IRUSR | S_IWUSR);
 
                 if (outdatafile < 0 || outkeyfile < 0)
                         pdie("Open failed");
 
         }
 
-        printf(".done\n");
-
         u_int64_t dataskeyaddress = 0;
         u_int64_t keyskeyaddress = 0;
-
+	
+        uint skeysize = 0;
+        u_int64_t datalen = 0;
+        
         if (mode == ENCRYPT) {
 
                 printf("Getting device size...");
@@ -739,8 +735,11 @@ void immer_main(int mode, char *devicename, names filename, char *charpassword, 
 
                 free(outpassword);
         }
+        
 
         if (mode == DECRYPT) {
+        	
+	        struct pass password = {0, 0, 0};
 
                 printf("Preparing password...");
                 prepare_password(charpassword, &password);

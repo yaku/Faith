@@ -108,7 +108,7 @@ u_int64_t arg_file_size(char *argument) {
 int main(int argc, char **argv)
 {
 
-        int mode=0;
+        int mode = 0;
 
         /*Check comand line arguments*/
         if (argc == 1)
@@ -126,7 +126,10 @@ int main(int argc, char **argv)
         config conf = {0, 0};
 
         int i;
-        char *list, *pass, *name;
+        char *list = NULL;
+        uchar *pass = NULL;
+        char *name = NULL;
+        
         int needargs = 1;
 
         for (i = 2; i < argc; i += 2) {
@@ -149,7 +152,7 @@ int main(int argc, char **argv)
                                         print_usage();
 
                                 else {
-                                        pass = argv[i + 1];
+                                        pass = (uchar *) argv[i + 1];
                                         needargs++;
                                 }
 

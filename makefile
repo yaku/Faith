@@ -1,4 +1,4 @@
-CFLAGS = -mtune=i686 -march=i686 -D_FILE_OFFSET_BITS=64 -O2 -fdata-sections -ffunction-sections -Wl,--gc-sections -s
+CFLAGS = -D_FILE_OFFSET_BITS=64 -O2 -Wall
 
 CC = gcc
 LIBS =
