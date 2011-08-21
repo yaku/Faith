@@ -11,8 +11,8 @@
 struct pass {
     
         uint skeysize;
-        u_int64_t dataskeyaddress;
-        u_int64_t keyskeyaddress;
+        off_t dataskeyaddress;
+        off_t keyskeyaddress;
     
 } pass;
 
@@ -143,8 +143,8 @@ void prepare_password(uchar *charpassword, struct pass *password)
         
         replace_mixed2raw(mixedarr ,rawarr);
     
-        password->keyskeyaddress  = arr2long(rawarr, 5);
-        password->dataskeyaddress = arr2long(rawarr + 5, 5);
+        password->keyskeyaddress  = (off_t) arr2long(rawarr, 5);
+        password->dataskeyaddress = (off_t) arr2long(rawarr + 5, 5);
         password->skeysize = (uint) arr2long(rawarr + 10, 4);
     
         free(rawarr);
@@ -152,15 +152,15 @@ void prepare_password(uchar *charpassword, struct pass *password)
     
 }
 
-void make_password(uchar *outpassword, uint skeysize, u_int64_t dataskeyaddress,
-						      u_int64_t keyskeyaddress) 
+void make_password(uchar *outpassword, uint skeysize, off_t dataskeyaddress,
+						      off_t keyskeyaddress) 
 {
 
         uchar *rawarr = calloc(15, 1);
         uchar *mixedarr = calloc(15, 1);
     
-        long2arr(keyskeyaddress, rawarr, 5);
-        long2arr(dataskeyaddress, rawarr + 5, 5);
+        long2arr((u_int64_t) keyskeyaddress, rawarr, 5);
+        long2arr((u_int64_t) dataskeyaddress, rawarr + 5, 5);
         long2arr((u_int64_t) skeysize, rawarr + 10, 4);
         
         replace_raw2mixed(rawarr, mixedarr);

@@ -10,6 +10,6 @@
 typedef struct config {
 
         char isfile;
-        u_int64_t filesize;
+        off_t filesize;
 
 } config;
