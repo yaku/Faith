@@ -38,8 +38,7 @@ void gammacipher_main (int mode, names filename)
 
         if (mode == ENCRYPT) {
 
-                struct device keyfile = {key_file, file_size(filename.data)};
-                fill_random(&keyfile, keyfile.size);
+                fill_random(key_file, file_size(filename.data));
 
                 lseek(key_file, 0, SEEK_SET);
         }

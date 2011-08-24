@@ -9,6 +9,9 @@
  
 typedef unsigned char uchar;
 
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
+
 #define ENCRYPT 0
 #define DECRYPT 1
 

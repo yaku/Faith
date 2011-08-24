@@ -16,9 +16,6 @@ struct pass {
     
 } pass;
 
-#define MAX(x, y) (((x) > (y)) ? (x) : (y))
-#define MIN(x, y) (((x) < (y)) ? (x) : (y))
-
 void base64_encode(uchar *in, size_t inlen, uchar *out, size_t outlen)
 {
 	
@@ -42,7 +39,7 @@ void base64_encode(uchar *in, size_t inlen, uchar *out, size_t outlen)
 							(outlen - current_len));
 		
         	for (i = 0; i < out_bytes + 1; i++)
-                	*(out + i) = table[(((buff >> 6 * i) << (64 - 6))  >> (64 - 6))];
+                	*(out + i) = table[(((buff >> 6 * i) << 58)  >> 58)];
 		
 		in += input_bytes;
 		out += out_bytes;
@@ -77,7 +74,7 @@ void base64_decode(uchar *in, size_t inlen, uchar *out, size_t outlen)
         	
         	for (i = 0; i < input_bytes; i++) {
         	
-        		index = (uint) ((uchar *) memchr(table, *(in + i), 64) - table);
+        		index = (uchar *) memchr(table, *(in + i), 64) - table;
         	        index_with_bitshift = (index << (6 * i));
         	        buff |= index_with_bitshift;
         	}
