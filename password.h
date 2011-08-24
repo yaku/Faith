@@ -16,95 +16,79 @@ struct pass {
     
 } pass;
 
-void stage2pass(u_int64_t stage, uchar *pass, int sixbitsequences) 
-{
+#define MAX(x, y) (((x) > (y)) ? (x) : (y))
+#define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
+void base64_encode(uchar *in, size_t inlen, uchar *out, size_t outlen)
+{
+	
+        int i = 0;
+        
         uchar table[] = "/1234567890abcdefghijklmnopqrstu"
         		"vwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ";    
-    
-        int i = 0;
-    
-        for (i = 0; i < sixbitsequences; i++)
-                *(pass + sixbitsequences - 1 - i) = table[(((stage >> 6 * i) << (64 - 6))  >> (64 - 6))];
-
+	
+	size_t input_bytes;
+	size_t current_len = 0;
+	u_int64_t buff = 0;
+	int out_bytes = 0;
+	
+	while (inlen) {
+	
+		buff = 0;
+		input_bytes = MIN(inlen, 3);
+		
+		memcpy(&buff, in, input_bytes);
+		out_bytes = MIN((int) floor(input_bytes * 4 / 3.0), 
+							(outlen - current_len));
+		
+        	for (i = 0; i < out_bytes + 1; i++)
+                	*(out + i) = table[(((buff >> 6 * i) << (64 - 6))  >> (64 - 6))];
+		
+		in += input_bytes;
+		out += out_bytes;
+		inlen -= input_bytes;
+		current_len += out_bytes;
+	}
 }
 
-u_int64_t pass2stage( uchar *pass, int sixbitsequences) 
+void base64_decode(uchar *in, size_t inlen, uchar *out, size_t outlen)
 {
 
-        uchar table[] = "/1234567890abcdefghijklmnopqrstu"
+	uchar table[] = "/1234567890abcdefghijklmnopqrstu"
         		"vwxyz+ABCDEFGHIJKLMNOPQRSTUVWXYZ"; 
 
-        u_int64_t stage = 0;
+        uint buff = 0;
+        size_t current_len = 0;
         int i = 0;
-    
-        for (i = 0; i < sixbitsequences; i++) {
-                stage += ((uchar *) memchr(table, pass[i], 64) - table);
-                stage <<= 6;
-        }    
-        stage >>= 6;
-    
-        return stage;
-}
-
-u_int64_t arr2long(uchar *arr, int bytes) 
-{
-
-        u_int64_t stage = 0;
-        int i = 0;    
-
-    
-        for (i = 0; i < bytes; i++) {
-                stage += arr[i];
-                stage <<= 8;
-        }
-        stage >>= 8;
-    
-        return stage;
-
-}
-
-void long2arr(u_int64_t stage, uchar *arr, int bytes) 
-{
-
-        int i = 0;     
-    
-        for (i = 0; i < bytes; i++)
-                *(arr + bytes - 1 - i) = (((stage >> 8 * i) << (64 - 8))  >> (64 - 8));
-
-}
-
-void arr2pass(uchar *in, uchar *pass) 
-{
-
-        u_int64_t stage1 = 0;
-        u_int64_t stage2 = 0;
-        u_int64_t stage3 = 0;
-
-        stage1 = arr2long(in, 6);
-        stage2 = arr2long(in + 6, 6);
-        stage3 = arr2long(in + 12, 2);
-    
-        stage2pass(stage1, pass, 8);
-        stage2pass(stage2, pass + 8, 8);
-        stage2pass(stage3, pass + 16, 3);
-    
-}
-
-void pass2arr(uchar *pass, uchar *arr) 
-{
-
-        u_int64_t stage1 = 0;
-        u_int64_t stage2 = 0;
-        u_int64_t stage3 = 0;
-    
-        stage1=pass2stage(pass, 8);
-        stage2=pass2stage(pass + 8, 8);
-        stage3=pass2stage(pass + 16, 3);
-    
-        long2arr(stage1, arr, 6);
-        long2arr(stage2, arr + 6, 6);
-        long2arr(stage3, arr + 12, 2);
+    	
+    	uint index = 0;
+    	uint index_with_bitshift = 0;
+    	size_t input_bytes = 0;
+    	int out_bytes = 0;
+    	
+    	while (inlen) {
+    		
+    		input_bytes = MIN(inlen, 4);
+		
+		out_bytes = MIN((int) floor(input_bytes * 3.0 / 4), 
+							(outlen - current_len));
+        	
+    		buff = 0;
+        	
+        	for (i = 0; i < input_bytes; i++) {
+        	
+        		index = (uint) ((uchar *) memchr(table, *(in + i), 64) - table);
+        	        index_with_bitshift = (index << (6 * i));
+        	        buff |= index_with_bitshift;
+        	}
+        	
+        	memcpy(out, &buff, out_bytes);
+        	
+        	in += input_bytes;
+		out += out_bytes;
+		inlen -= input_bytes;
+		current_len += out_bytes;
+	}
 }
 
 void replace_raw2mixed(uchar *raw, uchar *mixed) 
@@ -139,14 +123,14 @@ void prepare_password(uchar *charpassword, struct pass *password)
         uchar *rawarr = calloc(15, 1);
         uchar *mixedarr = calloc(15, 1);
         
-        pass2arr(charpassword, mixedarr);
+        base64_decode(charpassword, strlen((char *) charpassword), mixedarr, 15);
         
         replace_mixed2raw(mixedarr ,rawarr);
-    
-        password->keyskeyaddress  = (off_t) arr2long(rawarr, 5);
-        password->dataskeyaddress = (off_t) arr2long(rawarr + 5, 5);
-        password->skeysize = (uint) arr2long(rawarr + 10, 4);
-    
+        
+        memcpy(&(password->keyskeyaddress), rawarr, 5);
+        memcpy(&(password->dataskeyaddress), rawarr + 5, 5);
+    	memcpy(&(password->skeysize), rawarr + 10, 4);
+      
         free(rawarr);
         free(mixedarr);
     
@@ -158,14 +142,14 @@ void make_password(uchar *outpassword, uint skeysize, off_t dataskeyaddress,
 
         uchar *rawarr = calloc(15, 1);
         uchar *mixedarr = calloc(15, 1);
-    
-        long2arr((u_int64_t) keyskeyaddress, rawarr, 5);
-        long2arr((u_int64_t) dataskeyaddress, rawarr + 5, 5);
-        long2arr((u_int64_t) skeysize, rawarr + 10, 4);
-        
+
+	memcpy(rawarr, &keyskeyaddress, 5);
+	memcpy(rawarr + 5, &dataskeyaddress, 5);
+	memcpy(rawarr + 10, &skeysize, 4);
+	
         replace_raw2mixed(rawarr, mixedarr);
     
-        arr2pass(mixedarr, outpassword);
+        base64_encode(mixedarr, 14, outpassword, 19);
         
         free(mixedarr);
         free(rawarr);
