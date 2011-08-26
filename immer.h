@@ -45,11 +45,27 @@ off_t ffile_size(int fd)
 
 }
 
+void trusted_write(int destination_file, uchar *buffer, off_t bytes_to_write)
+{
+
+	off_t written_bytes;
+
+	while (bytes_to_write) {
+                
+               	if ((written_bytes = write(destination_file, buffer, 
+               					       	   bytes_to_write)) < 0)
+                 		pdie("Write failed");
+                    	    
+                bytes_to_write -= written_bytes;
+                buffer += written_bytes;
+        }
+}
+
 void copy(int source_file, int destination_file, off_t nbytes)
 {
 
         uchar *buffer = malloc(BUFFER_SIZE);
-	int bytes_read, written_bytes;
+	int bytes_read;
 	
         while (nbytes) {
 
@@ -59,14 +75,7 @@ void copy(int source_file, int destination_file, off_t nbytes)
 		
 		nbytes -= bytes_read;
 		
-                while (bytes_read) {
-                
-                	if ((written_bytes = write(destination_file, buffer, 
-                					       bytes_read)) < 0)
-                    		pdie("Write failed");
-                    	    
-                    	bytes_read -= written_bytes;
-                }
+                trusted_write(destination_file, buffer, bytes_read);
 	}
 
         free(buffer);
@@ -85,7 +94,7 @@ void fill_random(int file, off_t nbytes)
 	copy(urandom, file, nbytes);
 }
 
-void archive2skey(off_t *skey, uchar *buffer, uint skeysize)
+void archive2skey(uchar *buffer, off_t *skey, uint skeysize)
 {
 
         int i = 0;
@@ -147,8 +156,8 @@ void read_space(int spacefile, uint index, struct space *outspace)
 	outspace->begin = 0;
 	outspace->end = 0;
 	
-	archive2skey(&(outspace->begin), buffer, 1);
-	archive2skey(&(outspace->end), buffer + SKEYRECORDSIZE, 1);
+	archive2skey(buffer, &(outspace->begin), 1);
+	archive2skey(buffer + SKEYRECORDSIZE, &(outspace->end), 1);
 	
 	free(buffer);
 }
@@ -206,7 +215,7 @@ void rewrite_space(int *spacefile, uint *used, off_t *skey, int lastused,
         	if (write(newspacefile, buffer, 2 * SKEYRECORDSIZE * towrite) < 0)
                 	pdie("Write failed");
 	
-		archive2skey(&(newspace.begin), buffer + towrite * 2 * SKEYRECORDSIZE, 1);
+		archive2skey(buffer + towrite * 2 * SKEYRECORDSIZE, &(newspace.begin), 1);
 		newspace.end = *skey;
 		
 		if (newspace.end > (newspace.begin + BLOCKSIZE)) {
@@ -220,7 +229,7 @@ void rewrite_space(int *spacefile, uint *used, off_t *skey, int lastused,
 		}
 		
 		newspace.begin = *skey + blocksize;
-		archive2skey(&(newspace.end), buffer + towrite * 2 * SKEYRECORDSIZE + SKEYRECORDSIZE, 1);
+		archive2skey(buffer + towrite * 2 * SKEYRECORDSIZE + SKEYRECORDSIZE, &(newspace.end), 1);
 
 		if (newspace.end > (newspace.begin + BLOCKSIZE)) {
 	
@@ -238,7 +247,7 @@ void rewrite_space(int *spacefile, uint *used, off_t *skey, int lastused,
 		skey++;
 	}
 
-	int readbytes, written_bytes;
+	int readbytes;
 
 	while ((readbytes = read(*spacefile, buffer,
 					2 * SKEYRECORDSIZE * BUFFERED_BLOCKS))) {
@@ -246,13 +255,7 @@ void rewrite_space(int *spacefile, uint *used, off_t *skey, int lastused,
 		if (readbytes < 0)
 			pdie("Read failed");
 		
-		while(readbytes) {
-               		if ((written_bytes = write(newspacefile, buffer, 
-               							readbytes)) < 0)
-                	      	pdie("Write failed");
-                	
-                	readbytes -= written_bytes;
-                }
+		trusted_write(newspacefile, buffer, readbytes);
        	}
 
 
@@ -340,7 +343,8 @@ void make_skey(int *spacefile, off_t *skey, uint keysize, int blocksize)
 			
 			if (newspace.end > (newspace.begin + blocksize)) {
 			
-                        	*(skey + lastused) = get_skey_in_space(&newspace, blocksize);
+                        	*(skey + lastused) = get_skey_in_space(&newspace,
+                        					     blocksize);
                         	*(usedids + lastused) = newspaceid;
 
                         	lastused++;                        
@@ -353,7 +357,6 @@ void make_skey(int *spacefile, off_t *skey, uint keysize, int blocksize)
                 }  else {
 
                         level += 1;
-
                 }
                 
                 if ((spaces == 0) || (level == MAXLEVEL)) {
@@ -372,7 +375,8 @@ void make_skey(int *spacefile, off_t *skey, uint keysize, int blocksize)
 			
 			if (spaces == 0) {
 
-        			printf("@Input is too big for this device\nExiting.\n");
+        			printf("@Input is too big for this device\n"
+        			       "Exiting.\n");
                 		exit(1);
 
         		}
@@ -416,9 +420,8 @@ void make_skey_main(int *spacefile, int skeyfile, uint keysize)
                 make_skey(spacefile, skey, to_make, BLOCKSIZE);
                 skey2archive(skey, buffer, to_make);
 
-                if (write(skeyfile, buffer, to_make * SKEYRECORDSIZE) < 0)
-                        pdie("Write failed");
-
+		trusted_write(skeyfile, buffer, to_make * SKEYRECORDSIZE);
+		
                 keysize -= to_make;
         }
 
@@ -426,27 +429,14 @@ void make_skey_main(int *spacefile, int skeyfile, uint keysize)
         free(skey);
 }
 
-void write_data(struct device *dev, uchar *block, int length, off_t address)
+void write_data(struct device *dev, uchar *block, off_t length, off_t address)
 {
 
         extern int errno;
 
         lseek(dev->descriptor, address, SEEK_SET);
-        
-        int written_bytes;
 
-        while (length) {
-                if ((written_bytes = write(dev->descriptor, block, length)) < 0) {
-                
-                        if (errno == EINTR)
-                                continue;
-                        else
-                                pdie("Write failed");
-                }
-
-                length -= written_bytes;
-                block += written_bytes;
-        }
+        trusted_write(dev->descriptor, block, length);
 }
 
 void read_data(struct device *dev, uchar *block, uint length, off_t address)
@@ -489,7 +479,7 @@ void write_by_skey(struct device *dev, int datafile, int skeyfile, uint blocks)
                 if (read(skeyfile, buffer, SKEYRECORDSIZE * to_write) < 0)
                         pdie("Read failed");
 
-                archive2skey(skey, buffer, to_write);
+                archive2skey(buffer, skey, to_write);
 
                 if (read(datafile, block, BLOCKSIZE * to_write) < 0)
                         pdie("Read failed");
@@ -522,7 +512,7 @@ void get_data(struct device *dev, int datafile, off_t skeyaddress, uint keysize)
 		
                 read_data(dev, buffer, to_read * SKEYRECORDSIZE, skeyaddress);
 
-                archive2skey(skey, buffer, to_read);
+                archive2skey(buffer, skey, to_read);
 
                 for (i = 0; i < to_read; i++)
                         read_data(dev, block + i * BLOCKSIZE, BLOCKSIZE, *(skey + i));
@@ -572,7 +562,8 @@ off_t device_size(struct device *dev)
 
 }
 
-void immer_main(int mode, char *devicename, names filename, uchar *charpassword, config conf)
+void immer_main(int mode, char *devicename, names filename, uchar *charpassword, 
+								    config conf)
 {
 
 	extern int space1fd;
@@ -582,7 +573,8 @@ void immer_main(int mode, char *devicename, names filename, uchar *charpassword,
         struct device dev;
         
         if (conf.isfile)
-                dev.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+                dev.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, 
+                					     S_IRUSR | S_IWUSR);
         else
                 dev.descriptor = open(devicename, O_RDWR);
 
@@ -601,13 +593,18 @@ void immer_main(int mode, char *devicename, names filename, uchar *charpassword,
                 datafile = open(filename.enc, O_RDONLY);
                 keyfile  = open(filename.key, O_RDONLY);
 
-                dataskeyfile = open(filename.dataskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-                keyskeyfile  = open(filename.keyskey, O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+                dataskeyfile = open(filename.dataskey, O_RDWR | O_CREAT | O_TRUNC,
+                				       	     S_IRUSR | S_IWUSR);
+                keyskeyfile  = open(filename.keyskey, O_RDWR | O_CREAT | O_TRUNC, 
+                				             S_IRUSR | S_IWUSR);
 		
-		space1fd = open("space.1", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
-		space2fd = open("space.2", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+		space1fd = open("space.1", O_RDWR | O_CREAT | O_TRUNC, 
+					   S_IRUSR | S_IWUSR);
+		space2fd = open("space.2", O_RDWR | O_CREAT | O_TRUNC, 
+					   S_IRUSR | S_IWUSR);
                 spacefile = space1fd;
-                if (datafile < 0 || keyfile < 0 || dataskeyfile < 0 || keyskeyfile < 0 || spacefile < 0)
+                if (datafile < 0 || keyfile < 0 || dataskeyfile < 0 || 
+                                               keyskeyfile < 0 || spacefile < 0)
                         pdie("Open failed");
 
         }
@@ -733,6 +730,4 @@ void immer_main(int mode, char *devicename, names filename, uchar *charpassword,
                 close(outdatafile);
                 close(outkeyfile);
         }
-
 }
-
