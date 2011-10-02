@@ -11,5 +11,6 @@ typedef struct config {
 
         char isfile;
         off_t filesize;
+        char fillrandom;
 
 } config;

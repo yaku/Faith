@@ -22,16 +22,23 @@
 #include "includes.h"
 
 #include "die.h"
+#include "io.h"
 #include "filename.h"
 #include "config.h"
 #include "password.h"
-#include "immer.h"
-#include "gammacipher.h"
+#include "libfaith.h"
+#include "faith.h"
 
 void print_usage()
 {
         printf("\
-Usage: faith -[e,d] [-l filelist] [-p pass] [-f size] device\n\
+Usage: faith -[e,d] [-l filelist] [-p pass] [-f size] [-n] device\n\
+-e - encryption\n\
+-d - decryption\n\
+-l - list of files\n\
+-p - password\n\
+-f - use file instead of disk. Requires size\n\
+-n - don't fill file/device with random data\n\
 Examples:\n\
 Encrypt files in filelist to device named /dev/sdb1\n\
 faith -e -l filelist /dev/sdb1\n\
@@ -123,7 +130,7 @@ int main(int argc, char **argv)
         else
                 print_usage();
 
-        config conf = {0, 0};
+        config conf = {0, 0, 1};
 
         int i;
         char *list = NULL;
@@ -169,6 +176,16 @@ int main(int argc, char **argv)
                                         if (conf.filesize == 0)
                                                 print_usage();
                                 }
+
+                                break;
+                        case 'n':
+                        	if (mode == DECRYPT)
+                                        print_usage();
+
+                                else {
+                                        conf.fillrandom = 0;
+                                }
+                                i -= 1;
 
                                 break;
                         }
