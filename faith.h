@@ -91,7 +91,7 @@ void immer_main(int mode, char *devicename, names filename, uchar *charpassword,
         struct device dev;
         
         if (conf.isfile)
-                dev.descriptor = open(devicename, O_RDWR | O_CREAT | O_TRUNC, 
+                dev.descriptor = open(devicename, O_RDWR | O_CREAT, 
                 					     S_IRUSR | S_IWUSR);
         else
                 dev.descriptor = open(devicename, O_RDWR);
