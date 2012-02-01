@@ -184,6 +184,8 @@ int main(int argc, char **argv)
 
                                 else {
                                         conf.fillrandom = 0;
+					conf.isfile = 1;
+                                        
                                 }
                                 i -= 1;
 
@@ -200,6 +202,15 @@ int main(int argc, char **argv)
 
         if (needargs != 3)
                 print_usage();
+
+	if ((conf.fillrandom == 0) && (conf.isfile == 1)) {
+		
+		conf.filesize = file_size(name);
+		if (conf.filesize == 0) {
+                        printf("Invalid field-file\n");
+                        print_usage();
+                }
+	}
         /*End of check comand line arguments*/
 
         names filename  = {
